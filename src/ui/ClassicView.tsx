@@ -1,23 +1,70 @@
 import { content } from '../content'
 import { asset } from '../lib/paths'
-import type { LinkItem } from '../content'
+import type { PanelContent, SectionId } from '../content'
 
-function LinkRow({ links }: { links?: LinkItem[] }) {
-  if (!links?.length) return null
+// Preferred order for the 2D view. Any panel NOT listed here is appended at the
+// end, so newly-added zones automatically show up in the Classic view too.
+const SECTION_ORDER: SectionId[] = ['about', 'experience', 'projects', 'contact', 'resume']
+
+// Renders one section (title → body → project cards → links), mirroring the 3D
+// Panel but laid out as a flat page section. Works for any PanelContent.
+function Section({ data }: { data: PanelContent }) {
   return (
-    <div className="classic__links">
-      {links.map((link) => (
-        <a
-          key={link.url}
-          className="btn btn--primary"
-          href={asset(link.url)}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          {link.label}
-        </a>
+    <section className="classic__section">
+      <h2>{data.title}</h2>
+
+      {data.body?.map((paragraph, i) => (
+        <p key={i}>{paragraph}</p>
       ))}
-    </div>
+
+      {data.projects && (
+        <div className="classic__projects">
+          {data.projects.map((proj) => (
+            <article key={proj.name} className="project">
+              <h3 className="project__name">{proj.name}</h3>
+              <p className="project__desc">{proj.description}</p>
+              {proj.tags && (
+                <ul className="project__tags">
+                  {proj.tags.map((tag) => (
+                    <li key={tag}>{tag}</li>
+                  ))}
+                </ul>
+              )}
+              {proj.links && (
+                <div className="project__links">
+                  {proj.links.map((link) => (
+                    <a
+                      key={link.url}
+                      href={asset(link.url)}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
+      {data.links && (
+        <div className="classic__links">
+          {data.links.map((link) => (
+            <a
+              key={link.url}
+              className="btn btn--primary"
+              href={asset(link.url)}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -31,7 +78,12 @@ export function ClassicView({
   canUse3D: boolean
   onEnter3D: () => void
 }) {
-  const { projects, about, contact, resume } = content.panels
+  // Explicit order first, then any extra panels not in the order list.
+  const ids = Object.keys(content.panels) as SectionId[]
+  const ordered = [
+    ...SECTION_ORDER.filter((id) => ids.includes(id)),
+    ...ids.filter((id) => !SECTION_ORDER.includes(id)),
+  ]
 
   return (
     <div className="classic">
@@ -58,64 +110,9 @@ export function ClassicView({
       </header>
 
       <main className="classic__main">
-        <section className="classic__section">
-          <h2>{about.title}</h2>
-          {about.body?.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-        </section>
-
-        <section className="classic__section">
-          <h2>{projects.title}</h2>
-          {projects.body?.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-          <div className="classic__projects">
-            {projects.projects?.map((proj) => (
-              <article key={proj.name} className="project">
-                <h3 className="project__name">{proj.name}</h3>
-                <p className="project__desc">{proj.description}</p>
-                {proj.tags && (
-                  <ul className="project__tags">
-                    {proj.tags.map((tag) => (
-                      <li key={tag}>{tag}</li>
-                    ))}
-                  </ul>
-                )}
-                {proj.links && (
-                  <div className="project__links">
-                    {proj.links.map((link) => (
-                      <a
-                        key={link.url}
-                        href={asset(link.url)}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        {link.label}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="classic__section">
-          <h2>{contact.title}</h2>
-          {contact.body?.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-          <LinkRow links={contact.links} />
-        </section>
-
-        <section className="classic__section">
-          <h2>{resume.title}</h2>
-          {resume.body?.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-          <LinkRow links={resume.links} />
-        </section>
+        {ordered.map((id) => (
+          <Section key={id} data={content.panels[id]} />
+        ))}
       </main>
 
       <footer className="classic__footer">© {content.name}</footer>

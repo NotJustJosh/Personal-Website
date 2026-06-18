@@ -7,6 +7,7 @@
 //   Vite's base path (import.meta.env.BASE_URL) so it keeps working when the
 //   site is served from a GitHub Pages sub-path like /My-Repo/.
 export function asset(url: string): string {
+  url = url.trim() // tolerate stray whitespace in content.ts
   // Already an absolute URL or a known scheme — leave it alone.
   if (/^([a-z]+:)?\/\//i.test(url) || /^(mailto:|tel:)/i.test(url)) {
     return url

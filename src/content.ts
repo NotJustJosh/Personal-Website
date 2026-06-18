@@ -10,8 +10,8 @@
 //  never have to touch the components to update content.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** The four sections of the site. Add/rename here if you change the zones. */
-export type SectionId = 'projects' | 'about' | 'contact' | 'resume'
+/** The sections of the site. Add or rename an id here whenever you add/rename a zone. */
+export type SectionId = 'projects' | 'about' | 'contact' | 'resume' | 'experience'
 
 export interface LinkItem {
   label: string
@@ -76,7 +76,7 @@ export interface SiteContent {
 // ─────────────────────────────────────────────────────────────────────────────
 export const content: SiteContent = {
   name: 'Josh Yuen',
-  tagline: 'Electrical Engineering · Physics · Explorer',
+  tagline: 'Electrical Engineering · Physics · Research',
 
   // Put your resume PDF at /public/resume.pdf, or use a full URL.
   resumeUrl: 'resume.pdf',
@@ -84,16 +84,17 @@ export const content: SiteContent = {
   // Zones are laid out around the spawn point (the player starts at [0,_,0]).
   // Tweak position/radius/color freely; the world updates automatically.
   zones: [
-    { id: 'projects', label: 'Projects', position: [14, 0, 0], radius: 4, color: '#ffb703' },
-    { id: 'about', label: 'About', position: [0, 0, 14], radius: 4, color: '#8ecae6' },
-    { id: 'contact', label: 'Contact', position: [-14, 0, 0], radius: 4, color: '#90be6d' },
-    { id: 'resume', label: 'Resume', position: [0, 0, -14], radius: 4, color: '#ef476f' },
+    { id: 'projects', label: 'Projects', position: [10, 0, 10], radius: 2, color: '#ffb703' },
+    { id: 'about', label: 'About', position: [0, 0, 2], radius: 2, color: '#8ecae6' },
+    { id: 'contact', label: 'Contact', position: [-10, 0, 10], radius: 2, color: '#90be6d' },
+    { id: 'resume', label: 'Resume', position: [0, 0, 10], radius: 2, color: '#ef476f' },
+    { id: 'experience', label: 'Experience', position: [-20, 0, 10], radius: 2, color: '#ffffff' },
   ],
 
   panels: {
     projects: {
-      title: 'Projects',
-      body: ['A few things I have built. Replace these with your own work.'],
+      title: 'Projects and Publications',
+      body: ['A few things I\'ve built or written.'],
       projects: [
         {
           name: 'Project One',
@@ -122,8 +123,23 @@ export const content: SiteContent = {
     about: {
       title: 'About',
       body: [
-        'Hi! I am a software engineer who likes building things people enjoy using. Replace this with a couple of short paragraphs about yourself.',
-        'Talk about your background, what you are excited about, and what you are looking for next. Keep it conversational.',
+        `Hello! I\'m Josh Yuen, a sophomore majoring in physics and electrical 
+        engineering at Northeastern University. With 108 credit-hours under my belt
+        and a 3.961 GPA, I'm applying for NEU's combined BS-MS program in the 
+        fall so I can graduate with a Masters degree in electrical engineering 
+        concentrated in electromagnetics, plasma, and optics--wish me luck!
+        `,
+        `My greatest strengths and greatest interest has always lain in the realm
+        of synthesis; the synthesis of knowledge, the synthesis of fields, and a strong
+        conviction that life--like field theory!--can and should be unified.
+        I've devoted myself to studying the interdisciplinarity of our technology-driven
+        society in a wide variety of topics including microelectromechanical 
+        systems, optical character recognition/facial recognition, and wearable technology,
+        to name a few areas in particular.
+        `,
+        `Feel free to take a look around my virtual world, or fast-forward to my resume, contact info
+        or projects using the "Classic View" button in the top left!
+        `
       ],
     },
 
@@ -132,7 +148,7 @@ export const content: SiteContent = {
       body: ['Want to get in touch? Pick whichever works for you.'],
       links: [
         { label: 'Email', url: 'mailto:joshua.y3141@gmail.com' },
-        { label: 'GitHub', url: 'https://github.com/NotJustJosh' },
+        //{ label: 'GitHub', url: 'https://github.com/NotJustJosh' },
         { label: 'LinkedIn', url: 'https://www.linkedin.com/in/josh-yuen-a30a79322/ ' },
       ],
     },
@@ -141,6 +157,34 @@ export const content: SiteContent = {
       title: 'Resume',
       body: ['Grab a copy of my resume below.'],
       links: [{ label: 'Download Resume (PDF)', url: 'resume.pdf' }],
+    },
+
+    experience: {
+      title: 'Experience',
+      body: ['Roles, internships, and research positions — replace with your own.'],
+      projects: [
+        {
+          name: 'Project One',
+          description:
+            'A short description of what it does, the problem it solves, and what makes it interesting.',
+          tags: ['React', 'TypeScript', 'WebGL'],
+          links: [
+            { label: 'Live', url: 'https://example.com' },
+            { label: 'Code', url: 'https://github.com/yourname/project-one' },
+          ],
+        },
+        {
+          name: 'Project Two',
+          description: 'Another project. Keep descriptions tight — one or two sentences works best.',
+          tags: ['Node', 'PostgreSQL'],
+          links: [{ label: 'Code', url: 'https://github.com/yourname/project-two' }],
+        },
+        {
+          name: 'Project Three',
+          description: 'A side project, experiment, or research piece you are proud of.',
+          tags: ['Python', 'ML'],
+        },
+      ],
     },
   },
 }
