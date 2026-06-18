@@ -1,15 +1,22 @@
-import { useGame } from '../store'
+import { content } from '../content'
+import { asset } from '../lib/paths'
+import { FastTravelMenu } from './FastTravelMenu'
 
 // Always-visible controls anchored to a fixed corner, reachable from anywhere:
-// a Resume button (opens the Resume panel) and a Classic-view switch.
+// a fast-travel menu, a Resume button (opens/downloads the resume), and a
+// Classic-view switch.
 export function PersistentUI({ onClassicView }: { onClassicView: () => void }) {
-  const openSection = useGame((s) => s.openSection)
-
   return (
     <div className="persistent">
-      <button className="btn btn--primary" onClick={() => openSection('resume')}>
+      <FastTravelMenu />
+      <a
+        className="btn btn--primary"
+        href={asset(content.resumeUrl)}
+        target="_blank"
+        rel="noreferrer noopener"
+      >
         Resume
-      </button>
+      </a>
       <button className="btn btn--ghost" onClick={onClassicView}>
         Classic view
       </button>

@@ -1,16 +1,12 @@
 import { content } from '../content'
 import { asset } from '../lib/paths'
-import type { PanelContent, SectionId } from '../content'
+import { islandPanel } from '../lib/world'
+import type { PanelContent } from '../content'
 
-// Preferred order for the 2D view. Any panel NOT listed here is appended at the
-// end, so newly-added zones automatically show up in the Classic view too.
-const SECTION_ORDER: SectionId[] = ['about', 'experience', 'projects', 'contact', 'resume']
-
-// Renders one section (title → body → project cards → links), mirroring the 3D
-// Panel but laid out as a flat page section. Works for any PanelContent.
-function Section({ data }: { data: PanelContent }) {
+// Renders one section (title → body → project cards → links). Works for any island.
+function Section({ id, data }: { id: string; data: PanelContent }) {
   return (
-    <section className="classic__section">
+    <section className="classic__section" id={`section-${id}`}>
       <h2>{data.title}</h2>
 
       {data.body?.map((paragraph, i) => (
@@ -21,8 +17,11 @@ function Section({ data }: { data: PanelContent }) {
         <div className="classic__projects">
           {data.projects.map((proj) => (
             <article key={proj.name} className="project">
-              <h3 className="project__name">{proj.name}</h3>
-              <p className="project__desc">{proj.description}</p>
+              <div className="project__head">
+                <h3 className="project__name">{proj.name}</h3>
+                {proj.date && <span className="project__date">{proj.date}</span>}
+              </div>
+              {proj.description && <p className="project__desc">{proj.description}</p>}
               {proj.tags && (
                 <ul className="project__tags">
                   {proj.tags.map((tag) => (
@@ -68,9 +67,9 @@ function Section({ data }: { data: PanelContent }) {
   )
 }
 
-// A clean 2D version of the entire site, rendered straight from content.ts.
-// Shown automatically on phones / no-WebGL devices, and reachable via the
-// "Classic view" button at any time.
+// A clean, scrollable 2D version of the entire site with a sticky nav menu —
+// both rendered straight from the islands array, so they stay in sync. Shown
+// automatically on phones / no-WebGL devices, and reachable via "Classic view".
 export function ClassicView({
   canUse3D,
   onEnter3D,
@@ -78,21 +77,21 @@ export function ClassicView({
   canUse3D: boolean
   onEnter3D: () => void
 }) {
-  // Explicit order first, then any extra panels not in the order list.
-  const ids = Object.keys(content.panels) as SectionId[]
-  const ordered = [
-    ...SECTION_ORDER.filter((id) => ids.includes(id)),
-    ...ids.filter((id) => !SECTION_ORDER.includes(id)),
-  ]
-
   return (
     <div className="classic">
-      <header className="classic__header">
-        <div>
-          <h1 className="classic__name">{content.name}</h1>
-          <p className="classic__tagline">{content.tagline}</p>
-        </div>
-        <div className="classic__actions">
+      {/* Sticky nav generated from the islands */}
+      <header className="classic__nav">
+        <a className="classic__brand" href="#top">
+          <strong>{content.name}</strong>
+        </a>
+        <nav className="classic__navlinks">
+          {content.islands.map((island) => (
+            <a key={island.id} href={`#section-${island.id}`}>
+              {island.label}
+            </a>
+          ))}
+        </nav>
+        <div className="classic__navactions">
           <a
             className="btn btn--primary"
             href={asset(content.resumeUrl)}
@@ -109,9 +108,14 @@ export function ClassicView({
         </div>
       </header>
 
-      <main className="classic__main">
-        {ordered.map((id) => (
-          <Section key={id} data={content.panels[id]} />
+      <main className="classic__main" id="top">
+        <section className="classic__hero">
+          <h1 className="classic__name">{content.name}</h1>
+          <p className="classic__tagline">{content.tagline}</p>
+        </section>
+
+        {content.islands.map((island) => (
+          <Section key={island.id} id={island.id} data={islandPanel(island)} />
         ))}
       </main>
 

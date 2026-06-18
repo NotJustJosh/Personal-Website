@@ -5,6 +5,7 @@ import { Hud } from './ui/Hud'
 import { PanelOverlay } from './ui/PanelOverlay'
 import { PersistentUI } from './ui/PersistentUI'
 import { InputManager } from './ui/InputManager'
+import { FadeOverlay } from './ui/FadeOverlay'
 import { ClassicView } from './ui/ClassicView'
 import { shouldUseClassicView, isWebGLAvailable } from './lib/device'
 
@@ -28,6 +29,7 @@ export default function App() {
       <Hud />
       <PanelOverlay />
       <PersistentUI onClassicView={() => setMode('classic')} />
+      <FadeOverlay />
       <InputManager />
     </div>
   )

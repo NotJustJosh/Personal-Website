@@ -1,15 +1,20 @@
 import { Suspense, useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { Sky, Grid } from '@react-three/drei'
-import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier'
+import { Physics } from '@react-three/rapier'
 import { Player } from '../components/Player'
 import { CameraRig } from '../components/CameraRig'
-import { Zone } from '../components/Zone'
+import { Island } from '../components/Island'
+import { Bridge } from '../components/Bridge'
+import { WorldBorder } from '../components/WorldBorder'
 import { content } from '../content'
+import { getBridges } from '../lib/world'
 import { useGame } from '../store'
+import { WORLD } from '../config'
+
+// Bridges are derived once from the islands' `neighbors` lists.
+const bridges = getBridges()
 
 // Flips the global `ready` flag once everything inside <Suspense> has loaded.
-// (Sits inside Suspense, so it only mounts after suspended assets resolve.)
 function SceneReady() {
   const setReady = useGame((s) => s.setReady)
   useEffect(() => {
@@ -19,72 +24,47 @@ function SceneReady() {
   return null
 }
 
-// Flat ground: a thin fixed physics box + a visual plane.
-function Ground() {
-  return (
-    <RigidBody type="fixed" colliders={false} friction={1}>
-      {/* Half-extents [100, 0.5, 100] → 200 × 1 × 200 box; top surface at y = 0. */}
-      <CuboidCollider args={[100, 0.5, 100]} position={[0, -0.5, 0]} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#46603f" roughness={1} />
-      </mesh>
-    </RigidBody>
-  )
-}
-
 export function Experience() {
   // Shared position written by the Player and read by the camera.
   const playerPos = useRef(new THREE.Vector3(0, 1, 0))
 
   return (
     <>
-      {/* Sky + lighting */}
-      <Sky sunPosition={[100, 40, 100]} turbidity={6} rayleigh={1.2} />
-      <ambientLight intensity={0.6} />
-      <hemisphereLight args={['#bcd4ff', '#3a5a40', 0.4]} />
+      {/* Soft lighting for the pale void (no sun disc — see World.tsx for the void color) */}
+      <ambientLight intensity={0.75} />
+      <hemisphereLight args={['#ffffff', '#b8c6e0', 0.6]} />
       <directionalLight
-        position={[25, 35, 15]}
-        intensity={1.5}
+        position={[30, 45, 20]}
+        intensity={1.4}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
+        shadow-camera-left={-60}
+        shadow-camera-right={60}
+        shadow-camera-top={60}
+        shadow-camera-bottom={-60}
         shadow-camera-near={1}
-        shadow-camera-far={120}
+        shadow-camera-far={200}
       />
 
-      {/* Decorative grid so movement is readable */}
-      <Grid
-        position={[0, 0.02, 0]}
-        args={[200, 200]}
-        cellSize={1}
-        cellThickness={0.6}
-        cellColor="#3a4f36"
-        sectionSize={10}
-        sectionThickness={1.2}
-        sectionColor="#6b8f5e"
-        fadeDistance={80}
-        fadeStrength={1}
-        followCamera={false}
-        infiniteGrid
-      />
+      {/* Faint shimmer wall at the edge of the playable area (visual hint only) */}
+      <WorldBorder />
 
-      {/* Physics world + everything that collides */}
+      {/* Physics world: islands + bridges are the only colliders; the void is empty. */}
       <Suspense fallback={null}>
-        <Physics gravity={[0, -18, 0]}>
-          <Ground />
-          <Player targetRef={playerPos} />
-          {content.zones.map((zone) => (
-            <Zone key={zone.id} zone={zone} />
+        <Physics gravity={[0, WORLD.GRAVITY, 0]}>
+          {content.islands.map((island) => (
+            <Island key={island.id} island={island} />
           ))}
+          {bridges.map((b) => (
+            <Bridge key={`${b.a.id}::${b.b.id}`} a={b.a} b={b.b} />
+          ))}
+
+          <Player targetRef={playerPos} />
+          {/* Camera lives inside <Physics> so it can raycast for anti-clipping. */}
+          <CameraRig targetRef={playerPos} />
         </Physics>
         <SceneReady />
       </Suspense>
-
-      <CameraRig targetRef={playerPos} />
     </>
   )
 }

@@ -1,10 +1,11 @@
-# 3D Personal Portfolio
+# 3D Personal Portfolio — Floating Islands
 
-An explorable, single-player **open-world style** personal site that runs entirely
-in the browser and deploys to **GitHub Pages** as static files. Walk a character
-around a 3D world, step into labeled zones, and press **E** to open clean HTML
-panels with your content. Phones and no-WebGL browsers automatically get a clean
-2D **Classic view**.
+An explorable, single-player **open-world style** personal site: a world of **floating
+islands in a soft pale void**, connected by light-bridges. Walk a character across the
+islands, step onto one, and press **E** to open a clean HTML panel with that section's
+content. The entire world is **data-driven from one file** (`src/content.ts`). Phones and
+no-WebGL browsers automatically get a clean, scrollable 2D **Classic view** with a nav
+menu. It builds to static files and deploys to **GitHub Pages**.
 
 > No backend, no multiplayer, no networking — it all builds to static files.
 
@@ -12,20 +13,24 @@ panels with your content. Phones and no-WebGL browsers automatically get a clean
 
 - **Vite + React + TypeScript**
 - **React Three Fiber** (`@react-three/fiber`) — the 3D scene
-- **drei** (`@react-three/drei`) — Sky, Grid, Text, loaders, helpers
+- **drei** (`@react-three/drei`) — Text, loaders, helpers
 - **Rapier** (`@react-three/rapier`) — physics + the character controller
-- **zustand** — tiny shared state between the 3D scene and the DOM UI
+- **zustand** — shared state between the 3D scene and the DOM UI
 
 ## Controls
 
 | Action | Input |
 | --- | --- |
 | Move | `W` `A` `S` `D` / arrow keys |
-| Jump | `Space` |
+| Sprint | hold `Shift` |
+| Jump / double-jump | `Space` (twice) |
 | Look around | drag the mouse |
 | Zoom | scroll wheel |
-| Interact (open a zone's panel) | `E` |
+| Interact (open an island's panel) | `E` |
 | Close a panel | `Esc` or the × button |
+| Fast-travel | the **Fast travel** menu (top-right) |
+
+Fall off the world? You're gently respawned on the nearest island — no penalty.
 
 ---
 
@@ -33,15 +38,92 @@ panels with your content. Phones and no-WebGL browsers automatically get a clean
 
 ```bash
 npm install      # first time only
-npm run dev      # start the dev server, then open the printed http://localhost URL
+npm run dev      # then open the printed http://localhost URL
 ```
 
 Build the static site and preview the production output:
 
 ```bash
-npm run build    # type-checks then writes static files to ./dist
+npm run build    # type-checks, then writes static files to ./dist
 npm run preview  # serve ./dist locally to sanity-check the build
 ```
+
+---
+
+## ✦ The most important file: `src/content.ts`
+
+**The entire world is generated from the `islands` array in `src/content.ts`.** Add,
+remove, or move an island by editing ONLY that array — no other code changes. Adding an
+entry automatically:
+
+- spawns the island geometry at its position,
+- adds it to the **fast-travel menu**,
+- makes it a valid **fall-respawn** target,
+- generates **light-bridges** to the ids in its `neighbors`,
+- wires its **interaction zone + content panel**,
+- adds it to the **Classic view** page and its **nav menu**.
+
+### Add an island
+
+Append an object to `islands`:
+
+```ts
+{
+  id: 'blog',                      // unique id (referenced by other islands' neighbors)
+  label: 'Blog',                   // floating label + menu name
+  position: [40, 6, -20],          // [x, y, z]; y is the surface height
+  accentColor: '#c77dff',          // color washing the island + its bridges/label
+  size: 7,                         // island radius (optional; default in src/config.ts)
+  neighbors: ['about'],            // light-bridges are drawn to these island ids
+  content: {
+    body: ['A paragraph or two...'],
+    projects: [/* optional cards */],
+    links: [{ label: 'RSS', url: 'https://…' }],
+  },
+  // model: 'models/blog.glb',      // optional .glb in /public (Draco supported)
+}
+```
+
+Rules:
+- Exactly **one** island has `isHub: true` — that's the **spawn point** (currently `about`).
+- `neighbors` is **bidirectional & de-duplicated** — list a bridge on either island.
+- A typo'd neighbor id is skipped with a console warning (it never crashes the world).
+- Link URLs: a full `https://…`, a bare email (auto-`mailto:`), or a file in `/public`
+  (e.g. `resume.pdf`) — local files get the GitHub Pages base path automatically.
+
+### Remove an island
+Delete its entry **and** remove its id from any other island's `neighbors`.
+
+---
+
+## Tuning the feel
+
+| What | Where |
+| --- | --- |
+| Walk speed, sprint speed, jump speed, **jump count (double jump)** | constants at the top of [`src/components/Player.tsx`](src/components/Player.tsx) |
+| **World-border size**, fall-**respawn** Y, gravity | [`src/config.ts`](src/config.ts) (`WORLD`) |
+| Default island radius / thickness | [`src/config.ts`](src/config.ts) (`ISLAND`) |
+| Camera distance, pitch clamp, sensitivity, anti-clip padding | constants at the top of [`src/components/CameraRig.tsx`](src/components/CameraRig.tsx) |
+| Void color / fog distance | [`src/scene/World.tsx`](src/scene/World.tsx) |
+
+`WORLD.BORDER_RADIUS` is the single constant controlling the world border; the faint
+shimmer wall ([`WorldBorder.tsx`](src/components/WorldBorder.tsx)) and the player's clamp
+both read it.
+
+---
+
+## Swap in a `.glb` avatar or island model
+
+- **Avatar:** put your model at `public/models/avatar.glb`, then in
+  [`Player.tsx`](src/components/Player.tsx) replace the capsule `<mesh>` with `<Avatar />`
+  (from [`components/Avatar.tsx`](src/components/Avatar.tsx)). Adjust `scale`/`position` so
+  the feet sit at the capsule bottom (~0.9 units below its centre).
+- **Island set dressing:** set `model: 'models/your-thing.glb'` on an island in
+  `content.ts`. It loads in place of the placeholder crystal.
+
+Draco compression is already configured in [`src/lib/gltf.ts`](src/lib/gltf.ts). To
+self-host the decoder (no CDN), copy `node_modules/three/examples/jsm/libs/draco/` into
+`public/draco/` and point `DRACO_DECODER_PATH` at `` `${import.meta.env.BASE_URL}draco/` ``.
 
 ---
 
@@ -49,161 +131,77 @@ npm run preview  # serve ./dist locally to sanity-check the build
 
 ```
 src/
-  content.ts            ← EDIT THIS: all site content (zones, labels, panels, links)
-  store.ts              ← shared UI state (zustand)
-  App.tsx               ← chooses 3D world vs Classic view; lays out the DOM UI
-  main.tsx              ← React entry point
-
-  components/
-    Player.tsx          ← physics capsule + third-person character controller
-    CameraRig.tsx       ← drag-to-orbit follow camera
-    Zone.tsx            ← a zone's 3D marker + floating label
-    Avatar.tsx          ← example .glb avatar (not used by default)
-
+  content.ts            ← EDIT THIS: the islands array = the whole world
+  config.ts             ← world border, respawn Y, gravity, island dimensions
+  store.ts              ← shared UI/teleport/fade state (zustand)
+  App.tsx               ← 3D world vs Classic view; DOM UI layout
   scene/
-    World.tsx           ← the <Canvas>
-    Experience.tsx      ← ground, physics, sky, lighting, zones, player
-
-  ui/                   ← plain HTML/DOM, layered over the canvas
-    LoadingScreen.tsx   ← progress overlay while assets load
-    Hud.tsx             ← controls legend + "Press E" prompt
-    Panel.tsx           ← the content overlay panel
-    PanelOverlay.tsx    ← renders whichever panel is open
-    PersistentUI.tsx    ← always-visible Resume button + Classic view switch
-    InputManager.tsx    ← global E / Esc handling
-    ClassicView.tsx     ← the 2D fallback, rendered from content.ts
-
+    World.tsx           ← the <Canvas> + pale-void background/fog
+    Experience.tsx      ← islands + bridges + border + lights + player + camera
+  components/
+    Island.tsx          ← one island (collider, slab, accent light, label) from data
+    Bridge.tsx          ← procedural walkable light-bridge between two islands
+    WorldBorder.tsx     ← faint shimmer wall at the playable edge
+    Player.tsx          ← controller: move/sprint/double-jump/respawn/border/teleport
+    CameraRig.tsx       ← orbit camera w/ pitch clamp + raycast anti-clip
+    Avatar.tsx          ← example .glb avatar (not used by default)
+  ui/                   ← plain HTML/DOM over the canvas
+    LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI,
+    FastTravelMenu, FadeOverlay, InputManager, ClassicView
   lib/
-    paths.ts            ← base-path-aware URL helper for assets/links
+    world.ts            ← derived helpers: bridges, nearest island, spawn, panel adapter
+    paths.ts            ← base-path-aware URL helper
     device.ts           ← WebGL + mobile detection
     gltf.ts             ← GLTF loader with Draco support
   hooks/
-    useMovementKeys.ts  ← held-key movement state
+    useMovementKeys.ts  ← held-key movement state (incl. Shift sprint)
 ```
-
----
-
-## How to update the site (edit `src/content.ts`)
-
-**Everything you see is driven by `src/content.ts`.** You normally never touch the
-components. Both the 3D world and the Classic view read from this one file.
-
-### Add or edit a project
-
-Open `src/content.ts` and edit the `panels.projects.projects` array:
-
-```ts
-{
-  name: 'My New Project',
-  description: 'One or two sentences about it.',
-  tags: ['React', 'TypeScript'],
-  links: [
-    { label: 'Live', url: 'https://my-project.com' },
-    { label: 'Code', url: 'https://github.com/me/my-project' },
-  ],
-},
-```
-
-### Change your name / tagline / contact / about
-
-Edit the top fields (`name`, `tagline`, `resumeUrl`) and the `panels.about` /
-`panels.contact` entries.
-
-### Add your resume
-
-Drop `resume.pdf` into the **`public/`** folder. It's already linked via
-`resumeUrl: 'resume.pdf'`. (Or set `resumeUrl` to a full `https://…` URL.)
-
-### Move or restyle a zone
-
-Each entry in `zones` has a `position: [x, y, z]`, an interaction `radius`, a
-`label`, and a `color`. Change them and the world updates automatically.
-
-> Link/URL rule: anything that isn't a full URL (`https://…`, `mailto:…`) is
-> treated as a file in `public/` and is automatically prefixed with the GitHub
-> Pages base path. So `resume.pdf` "just works" on the sub-path.
-
----
-
-## How to swap in a `.glb` avatar (Draco-ready)
-
-1. Put your model at `public/models/avatar.glb` (Draco-compressed is fine — the
-   loader in `src/lib/gltf.ts` already supports it).
-2. In `src/components/Player.tsx`, replace the capsule `<mesh>…</mesh>` with
-   `<Avatar />` (import it from `../components/Avatar`).
-3. Adjust the avatar's `scale`/`position` so its feet sit at the capsule's bottom
-   (the capsule's origin is its centre; feet are ~0.9 units below it).
-
-To self-host the Draco decoder (no CDN dependency), copy
-`node_modules/three/examples/jsm/libs/draco/` into `public/draco/` and update
-`DRACO_DECODER_PATH` in `src/lib/gltf.ts` to `` `${import.meta.env.BASE_URL}draco/` ``.
 
 ---
 
 ## Deploy to GitHub Pages
 
-This repo ships a workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
-that builds and deploys automatically on every push to `main`.
+The workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds and
+deploys automatically on every push to `main`.
 
 ### ⚠️ Step 1 — set the base path (the #1 cause of a blank page)
 
-GitHub Pages serves a **project** repo from a sub-path:
-`https://<username>.github.io/<REPO_NAME>/`. Every asset URL must include that
-sub-path, so open [`vite.config.ts`](vite.config.ts) and set:
+GitHub Pages serves a **project** repo from a sub-path
+(`https://<username>.github.io/<REPO_NAME>/`), so every asset URL must include it. Open
+[`vite.config.ts`](vite.config.ts) and set:
 
 ```ts
 const REPO_NAME = 'your-repo-name' // ← must match your GitHub repo name exactly
 ```
 
-Set `base` to `'/'` instead **only if**:
-- your repo is literally `<username>.github.io` (a user/org site), **or**
-- you use a custom domain (CNAME).
-
-If the base path is wrong, the deployed page loads `index.html` but then 404s on
-its JS/CSS and shows a **blank page**. All asset and content paths in this project
-already respect the base path, so once `REPO_NAME` is correct, you're set.
+Set `base` to `'/'` instead **only if** your repo is `<username>.github.io` (a user/org
+site) or you use a custom domain. All asset/content/model/resume paths in this project
+already respect the base path, so once `REPO_NAME` is correct you're set.
 
 ### Step 2 — push to `main`
 
 ```bash
 git add -A
-git commit -m "Initial portfolio"
+git commit -m "Floating-islands portfolio"
 git branch -M main
 git remote add origin https://github.com/<username>/<REPO_NAME>.git
 git push -u origin main
 ```
 
-### Step 3 — one-time manual setup in GitHub (required)
+### Step 3 — one-time GitHub setting (required)
 
-After your first push:
-
-1. Go to your repo on GitHub → **Settings** → **Pages**.
-2. Under **Build and deployment** → **Source**, choose **GitHub Actions**.
-
-That's it. The next push (or re-running the workflow from the **Actions** tab)
-builds and publishes the site. The live URL appears in the workflow's `deploy`
-job and under Settings → Pages.
+Repo → **Settings** → **Pages** → **Build and deployment** → **Source** →
+**GitHub Actions**. The next push builds and publishes; the live URL appears in the
+workflow's `deploy` job and under Settings → Pages.
 
 ---
 
-## The base-path gotcha (quick reference)
+## Notes
 
-- **Project site** (`user.github.io/REPO/`) → `base: '/REPO/'`
-- **User/org site** (`user.github.io`) → `base: '/'`
-- **Custom domain** → `base: '/'`
-- Reference local files (resume, models) by a **relative** path in `content.ts`
-  (e.g. `resume.pdf`, `models/avatar.glb`) — the helpers prefix the base for you.
-- Don't hardcode absolute `/asset.png` URLs in your own code; use `asset(...)`
-  from `src/lib/paths.ts` or `modelUrl(...)` from `src/lib/gltf.ts`.
-
----
-
-## Notes & next steps
-
-- **Mobile/low-end**: phones and no-WebGL browsers get the Classic view
-  automatically (`src/lib/device.ts`). Desktop users can switch any time with the
-  **Classic view** button, and switch back with **Enter 3D world**.
-- This is an MVP foundation — obvious next steps: a real `.glb` avatar with walk
-  animation, richer environment props, footstep/ambient audio, and per-project
-  detail pages.
+- **Mobile/low-end:** phones and no-WebGL browsers get the Classic view automatically
+  ([`lib/device.ts`](src/lib/device.ts)); desktop users can toggle any time.
+- The build prints a chunk-size warning — that's Three.js + Rapier's WASM (~1.2 MB
+  gzipped), normal for a 3D app, not an error.
+- This is an MVP foundation. Obvious next steps: a real `.glb` avatar with walk
+  animation, richer island set-dressing, ambient audio, and per-project detail pages.
 ```
