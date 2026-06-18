@@ -1,37 +1,52 @@
 import { useMemo } from 'react'
+import * as THREE from 'three'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import type { Island } from '../content'
 
 // A slender, walkable light-bridge between two islands. Generated procedurally
 // from a neighbor pair (see lib/world.ts getBridges) — never placed by hand.
 //
-// The deck is FLAT (horizontal): it's rotated only around Y (yaw), so it never
-// tilts or banks. Its top surface is laid flush with the island surface, so it
-// reads as a level walkway. Keep connected islands at the same `y` (see the note
-// in content.ts) so both ends stay flush.
+// The deck RAMPS to connect islands at different heights, staying flush with both
+// island surfaces. It's oriented with yaw (heading) + pitch (slope) only — never
+// roll — so it tilts up/down like a ramp but never banks sideways. Two islands at
+// the same height get a perfectly flat bridge automatically (pitch = 0).
 
 const WIDTH = 2 // walkable width
-const THICKNESS = 0.2
+const THICKNESS = 0.2 // visual deck thickness
+// The collider is much thicker than the thin visual deck so the player can't
+// fall through it; its TOP still lines up with the deck surface you walk on.
+const COLLIDER_HALF = 0.5
+
+const UP = new THREE.Vector3(0, 1, 0)
+const FWD = new THREE.Vector3(0, 0, 1) // local axis we rotate about for pitch
 
 export function Bridge({ a, b }: { a: Island; b: Island }) {
   const { position, rotation, length, color } = useMemo(() => {
-    const dx = b.position[0] - a.position[0]
-    const dz = b.position[2] - a.position[2]
-    // Horizontal span only — the bridge stays flat regardless of any height diff.
-    const len = Math.hypot(dx, dz)
+    const [ax, ay, az] = a.position
+    const [bx, by, bz] = b.position
+    const dx = bx - ax
+    const dy = by - ay
+    const dz = bz - az
 
-    // Sit flush with the (higher) island surface; place the deck so its TOP face
-    // is level with the surface rather than its centre.
-    const surface = Math.max(a.position[1], b.position[1])
-    const midX = (a.position[0] + b.position[0]) / 2
-    const midZ = (a.position[2] + b.position[2]) / 2
+    const horiz = Math.hypot(dx, dz)
+    const len = Math.hypot(horiz, dy) // full sloped span (a → b)
+    const yaw = Math.atan2(-dz, dx) // point the deck's +X axis along the heading
+    const pitch = Math.atan2(dy, horiz) // tilt +X up toward the higher island
 
-    // Yaw only: rotate the box's local +X to point along the horizontal direction.
-    const yaw = Math.atan2(-dz, dx)
+    // q = Ry(yaw) · Rz(pitch). Pitch rotates about Z (the width axis), so the
+    // width stays horizontal after the yaw → the deck never banks (no roll).
+    const q = new THREE.Quaternion()
+      .setFromAxisAngle(UP, yaw)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(FWD, pitch))
+    const e = new THREE.Euler().setFromQuaternion(q)
 
     return {
-      position: [midX, surface - THICKNESS / 2, midZ] as [number, number, number],
-      rotation: [0, yaw, 0] as [number, number, number],
+      position: [(ax + bx) / 2, (ay + by) / 2 - THICKNESS / 2, (az + bz) / 2] as [
+        number,
+        number,
+        number,
+      ],
+      rotation: [e.x, e.y, e.z] as [number, number, number],
       length: len,
       color: a.accentColor,
     }
@@ -39,7 +54,10 @@ export function Bridge({ a, b }: { a: Island; b: Island }) {
 
   return (
     <RigidBody type="fixed" colliders={false} position={position} rotation={rotation} friction={1}>
-      <CuboidCollider args={[length / 2, THICKNESS / 2, WIDTH / 2]} />
+      <CuboidCollider
+        args={[length / 2, COLLIDER_HALF, WIDTH / 2]}
+        position={[0, THICKNESS / 2 - COLLIDER_HALF, 0]}
+      />
 
       {/* Deck */}
       <mesh receiveShadow>

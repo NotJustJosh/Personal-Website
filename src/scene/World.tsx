@@ -4,9 +4,11 @@ import { Experience } from './Experience'
 // The R3F <Canvas>. Everything 3D lives under <Experience />. The DOM UI is
 // rendered as siblings of this component (see App.tsx), layered on top.
 //
-// The "void" look comes from a pale background plus matching fog, so distant
-// islands softly fade into nothing instead of revealing a hard horizon.
-const VOID_COLOR = '#eaf1fb'
+// Night void: a dark background plus matching fog so distant islands + the cloud
+// sea fade softly into the dark. The gradient sky dome + stars (see Experience)
+// render with fog disabled so they stay crisp behind this fog.
+const NIGHT_COLOR = '#05070f'
+const FOG_COLOR = '#0a1024'
 
 export function World() {
   return (
@@ -16,8 +18,8 @@ export function World() {
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       camera={{ fov: 60, near: 0.1, far: 1000, position: [0, 8, 14] }}
     >
-      <color attach="background" args={[VOID_COLOR]} />
-      <fog attach="fog" args={[VOID_COLOR, 70, 230]} />
+      <color attach="background" args={[NIGHT_COLOR]} />
+      <fog attach="fog" args={[FOG_COLOR, 60, 300]} />
       <Experience />
     </Canvas>
   )

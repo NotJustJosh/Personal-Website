@@ -4,8 +4,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WORLD = {
-  /** Physics gravity (negative = down). Pairs with JUMP_SPEED in Player.tsx. */
-  GRAVITY: -20,
+  /** Physics gravity (negative = down). Heavier = less floaty. Pairs with
+   *  JUMP_SPEED + FALL_MULTIPLIER in Player.tsx. */
+  GRAVITY: -28,
 
   /**
    * Playable radius from the world origin. The player is gently stopped at this

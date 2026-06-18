@@ -26,6 +26,8 @@ import { WORLD, ORBIT } from '../config'
 //  • Dynamic Rapier capsule, rotations locked so it stays upright.
 //  • WASD/arrows move RELATIVE to the camera; Shift sprints; Space jumps.
 //  • DOUBLE JUMP: a second jump is allowed mid-air; resets on landing.
+//  • WALL JUMP: while clinging to a wall you can jump unlimited times (+ wall-slide).
+//  • Weighty arc: stronger gravity + FALL_MULTIPLIER so it's not floaty.
 //  • Falls into the void below RESPAWN_Y → gently respawns on the NEAREST island.
 //  • WORLD BORDER: clamped inside WORLD.BORDER_RADIUS (see config.ts).
 //  • Fast-travel teleports are picked up from the store.
@@ -38,6 +40,14 @@ const WALK_SPEED = 9 // snappy default (world units / second)
 const SPRINT_SPEED = 16 // hold Shift; clearly faster than walking
 const JUMP_SPEED = 9 // pairs with WORLD.GRAVITY for the jump arc
 const MAX_JUMPS = 2 // 2 = double jump; set to 1 to disable, 3 for triple, …
+// Falling faster than rising makes the jump feel weighty instead of floaty.
+const FALL_MULTIPLIER = 1.5 // gravity ×this while descending (1 = symmetric)
+// Terminal velocity: caps fall speed so you can't move fast enough to tunnel
+// through the (thin) bridge/island colliders in a single physics step.
+const MAX_FALL_SPEED = -32
+// Wall jump: while clinging to a wall you can jump unlimited times.
+const WALL_REACH = 0.62 // how close (horizontal) a wall must be to cling to it
+const WALL_SLIDE_MAX_FALL = -4 // capped descent speed while clinging (cling feel)
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Capsule dimensions — shared by the collider and the visible mesh.
@@ -48,6 +58,18 @@ const CENTER_TO_FEET = HALF_HEIGHT + RADIUS // 0.9
 const GROUND_RAY_LENGTH = 2
 const GROUNDED_THRESHOLD = CENTER_TO_FEET + 0.18
 const INTERACT_MARGIN = 1 // how far past an island's edge still counts as "on it"
+
+// Horizontal directions sampled to detect a nearby wall (for wall jump).
+const WALL_DIRS: [number, number][] = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [0.707, 0.707],
+  [-0.707, 0.707],
+  [0.707, -0.707],
+  [-0.707, -0.707],
+]
 
 interface PlayerProps {
   /** Shared vector the camera reads to follow the player. */
@@ -83,6 +105,18 @@ export function Player({ targetRef }: PlayerProps) {
     const ray = new rapier.Ray({ x: t.x, y: t.y, z: t.z }, { x: 0, y: -1, z: 0 })
     const hit = world.castRay(ray, GROUND_RAY_LENGTH, true, undefined, undefined, undefined, rb)
     return hit !== null && hit.timeOfImpact <= GROUNDED_THRESHOLD
+  }
+
+  // Detect a nearby vertical surface by casting short horizontal rays. Used for
+  // the wall jump: while clinging you can jump an unlimited number of times.
+  const isOnWall = (rb: RapierRigidBody): boolean => {
+    const t = rb.translation()
+    for (const [dx, dz] of WALL_DIRS) {
+      const ray = new rapier.Ray({ x: t.x, y: t.y, z: t.z }, { x: dx, y: 0, z: dz })
+      const hit = world.castRay(ray, WALL_REACH, true, rapier.QueryFilterFlags.EXCLUDE_DYNAMIC)
+      if (hit) return true
+    }
+    return false
   }
 
   const placeOn = (rb: RapierRigidBody, island: Island) => {
@@ -152,17 +186,36 @@ export function Player({ targetRef }: PlayerProps) {
       if (move.current.lengthSq() > 0) move.current.normalize().multiplyScalar(speed)
       rb.setLinvel({ x: move.current.x, y: linvel.y, z: move.current.z }, true)
 
-      // Double jump — reset count only when actually resting on a surface.
+      // Ground/wall state. Double jump resets when resting on a surface.
       const grounded = isGrounded(rb)
+      const onWall = !grounded && isOnWall(rb)
       if (grounded && linvel.y <= 0.05) jumpsRemaining.current = MAX_JUMPS
 
+      // Wall cling: cap the descent speed so you "stick" and can climb the wall.
+      const slideVel = rb.linvel()
+      if (onWall && slideVel.y < WALL_SLIDE_MAX_FALL) {
+        rb.setLinvel({ x: slideVel.x, y: WALL_SLIDE_MAX_FALL, z: slideVel.z }, true)
+      }
+
+      // Jump: ground/air jumps consume the count; wall jumps are UNLIMITED.
       const jumpHeld = keys.current.jump
-      if (jumpHeld && !prevJump.current && jumpsRemaining.current > 0) {
+      const canJump = jumpsRemaining.current > 0 || onWall
+      if (jumpHeld && !prevJump.current && canJump) {
         const cur = rb.linvel()
         rb.setLinvel({ x: cur.x, y: JUMP_SPEED, z: cur.z }, true)
-        jumpsRemaining.current -= 1
+        if (!onWall) jumpsRemaining.current -= 1 // clinging → free, infinite jumps
       }
       prevJump.current = jumpHeld
+    }
+
+    // Snappier, less-floaty arc: fall faster than you rise.
+    const vy = rb.linvel().y
+    rb.setGravityScale(vy < -0.2 ? FALL_MULTIPLIER : 1, true)
+
+    // Clamp to terminal velocity (anti-tunneling + a more natural fall).
+    if (vy < MAX_FALL_SPEED) {
+      const v = rb.linvel()
+      rb.setLinvel({ x: v.x, y: MAX_FALL_SPEED, z: v.z }, true)
     }
 
     // ── Nearest island within interaction range (you're standing on/near it) ──
@@ -209,6 +262,7 @@ export function Player({ targetRef }: PlayerProps) {
     <RigidBody
       ref={body}
       colliders={false}
+      ccd
       position={SPAWN_POS}
       enabledRotations={[false, false, false]}
       linearDamping={0}

@@ -2,6 +2,7 @@ import { content } from '../content'
 import { asset } from '../lib/paths'
 import { islandPanel } from '../lib/world'
 import type { PanelContent } from '../content'
+import { Lines } from './Lines'
 
 // Renders one section (title → body → project cards → links). Works for any island.
 function Section({ id, data }: { id: string; data: PanelContent }) {
@@ -18,7 +19,9 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
           {data.projects.map((proj) => (
             <article key={proj.name} className="project">
               <div className="project__head">
-                <h3 className="project__name">{proj.name}</h3>
+                <h3 className="project__name">
+                  <Lines text={proj.name} />
+                </h3>
                 {proj.date && <span className="project__date">{proj.date}</span>}
               </div>
               {proj.description && <p className="project__desc">{proj.description}</p>}

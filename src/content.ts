@@ -32,9 +32,9 @@
 //    • Exactly ONE island should have `isHub: true` — that's the spawn point.
 //    • `neighbors` is bidirectional & de-duplicated, so list a bridge on either
 //      island (you don't need to list it on both).
-//    • Bridges are FLAT (horizontal). Keep two connected islands at the SAME `y`
-//      so their bridge stays level and flush with both surfaces. (If they differ,
-//      the bridge lies flat at the higher island's level.)
+//    • Bridges RAMP between islands of different `y`, staying flush with both
+//      ends (they tilt up/down but never bank). Same-height neighbors just get a
+//      flat bridge. Keep slopes reasonable so they're comfortable to walk up.
 //    • Tune movement speeds in src/components/Player.tsx and world size / respawn
 //      in src/config.ts.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ export const content: SiteContent = {
     {
       id: 'projects',
       label: 'Projects',
-      position: [34, 0, 8],
+      position: [34, 5, 8],
       accentColor: '#ffb703',
       neighbors: ['experience'],
       orbit: true,
@@ -166,18 +166,22 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'Project: IMU-Based Hand Gesture Interface for 3D Design and Modeling',
-            date: '2025',
+            date: 'August 2025 - Present',
             description:
-              'A short description of what it does, the problem it solves, and what makes it interesting.',
-            tags: ['React', 'TypeScript', 'WebGL'],
+              `Developing a wearable glove-based input system using 9-axis IMU sensors to enable real-time 
+              hand gesture control and object manipulation in Blender 3D creation software.
+              Exploring shape memory alloy-based haptic feedback to provide tactile responses 
+              to virtual object interactions.
+              `,
+            tags: ['Sensing Array', 'CAD', 'Shape-Memory Alloy', 'Wearable Technology'],
             links: [
-              { label: 'Live', url: 'https://example.com' },
-              { label: 'Code', url: 'https://github.com/yourname/project-one' },
+              //{ label: 'Live', url: 'https://example.com' },
+              //{ label: 'Code', url: 'https://github.com/yourname/project-one' },
             ],
           },
           {
             name: 'Project: Deployable Solar Array for Small Satellites',
-            date: '2024',
+            date: 'September 2025 - May 2026',
             description:
               `Designed Circuit Block Diagram and Schematic for a modular and configurable set of  
               deployable solar array panels which included temeprature and sun sensing; 
@@ -188,7 +192,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Project: License Plate OCR Model',
-            date: '2024',
+            date: 'May 2026 - June 2026',
             description:
               'License plate imaging pipeline for fog occlusions and low visibility settings using grayscaling, gaussian filtering, and unsharp masking',
             tags: ['Tesseract OCR Engine', 'Open-Source Computer Vision Library (OpenCV)'],
@@ -199,7 +203,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Project: Terasic Spider Robot',
-            date: '2023',
+            date: 'May 2026 - June 2026',
             description:
               'Embedded Programming of DE10-nano FPGA, including PWM of servos and integration of sonar sensor.',
             tags: ['Embedded Programming', 'Field-Programmable Gate Array', 'Pulse-Width Modulation', 'Quartus Desgin Software'],
@@ -210,13 +214,13 @@ export const content: SiteContent = {
           },
           {
             name: 'Project: Automation of Dechlorination Tools for Aqua Pennsylvania',
-            date: '2023',
-            description: 'Text',
-            tags: ['idk', 'idk'],
+            date: 'August 2024 - May 2025',
+            description: ' Led development of automation solutions to improve water treatment efficiency that applied engineering principles to real-world challenges in partnership with Aqua Pennsylvania, a utility company; Co-created and taught an accredited class that developed and implemented real-world projects.',
+            tags: ['idk', 'Sensing Array'],
           },
           {
             name: 'Publication: Hide and Seek: A Multimodal Approach to Human Detection',
-            date: '2022',
+            date: 'July 2024',
             description: `Investigated the results of integrating IR sensing, motion profiling, and mmWave sensing into an open source 
             facial recognition software with the goal of increasing accuracy in detecting occluded faces and darker skin tones. 
             Implemented a machine learning model to interpret results.  Published in the 39th Volume of the Journal of the Pennsylvania Governor\’s School for the Sciences.`,
@@ -234,7 +238,7 @@ export const content: SiteContent = {
     {
       id: 'experience',
       label: 'Experience',
-      position: [8, 0, 34],
+      position: [8, -4, 34],
       accentColor: '#9d6bff',
       neighbors: [],
       orbit: true,
@@ -244,7 +248,7 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'Research Assistant: Microscale Acoustic and Photonic Systems Laboratory, Northeastern University',
-            date: 'Sep 2024 – Present',
+            date: 'Sep 2024 \– Present',
             description:
               'A short description of what it does, the problem it solves, and what makes it interesting.',
             tags: ['React', 'TypeScript', 'WebGL'],
@@ -275,10 +279,9 @@ export const content: SiteContent = {
     {
       id: 'contact',
       label: 'Contact',
-      position: [-32, 0, 12],
+      position: [-32, 8, 12],
       accentColor: '#90be6d',
       neighbors: ['resume', 'experience'],
-      orbit: true,
       content: {
         title: 'Contact',
         body: ['Want to get in touch? Pick whichever works for you.'],
@@ -294,7 +297,7 @@ export const content: SiteContent = {
     {
       id: 'resume',
       label: 'Resume',
-      position: [-12, 0, -32],
+      position: [-12, 3, -32],
       accentColor: '#ef476f',
       neighbors: [],
       content: {
@@ -307,16 +310,21 @@ export const content: SiteContent = {
     {
       id: 'honors',
       label: 'Honors',
-      position: [32, 0, -12],
+      position: [32, -2, -12],
       accentColor: '#06d6a0',
       neighbors: ['resume', 'projects', 'about'],
       // Honors is a compact list: names + dates only (no descriptions, no body).
       content: {
         title: 'Honors',
         projects: [
-          { name: 'Honor 1', date: '2024' },
-          { name: 'Honor 2', date: '2023' },
-          { name: 'Honor 3', date: '2023' },
+          { name: `National Merit Scholar 
+                  Sponsored by Northeastern University.`, date: '2025 - Present' },
+          { name: `John Martinson Honors College Member: 
+                  \n- Honors Self-Directed Learner Badge 
+                  \n- Honors Impact Badge 
+                  \n- Honors Community Engagement Badge`, date: '2025-Present' },
+          { name: 'Gerald F. Tonks Endowed Scholarship', date: '2026' },
+          { name: 'Qualified: VEX VRC Robotics World Championship', date: '2025' },
         ],
       },
     },

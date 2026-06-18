@@ -1,11 +1,14 @@
 import { Suspense, useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { Stars } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Player } from '../components/Player'
 import { CameraRig } from '../components/CameraRig'
 import { Island } from '../components/Island'
 import { Bridge } from '../components/Bridge'
 import { WorldBorder } from '../components/WorldBorder'
+import { SkyDome } from '../components/SkyDome'
+import { CloudLayer } from '../components/CloudLayer'
 import { content } from '../content'
 import { getBridges } from '../lib/world'
 import { useGame } from '../store'
@@ -30,12 +33,32 @@ export function Experience() {
 
   return (
     <>
-      {/* Soft lighting for the pale void (no sun disc — see World.tsx for the void color) */}
-      <ambientLight intensity={0.75} />
-      <hemisphereLight args={['#ffffff', '#b8c6e0', 0.6]} />
+      {/* Moon (also marks the light direction) — plain meshes, no async load */}
+      <group position={[60, 95, -70]}>
+        <mesh>
+          <sphereGeometry args={[7, 32, 32]} />
+          <meshBasicMaterial color="#eaf0ff" fog={false} toneMapped={false} />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[11, 32, 32]} />
+          <meshBasicMaterial
+            color="#9fb4ff"
+            transparent
+            opacity={0.16}
+            fog={false}
+            toneMapped={false}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+
+      {/* Moonlit lighting (cool + dim; islands' own accent lights do the rest) */}
+      <ambientLight intensity={0.35} color="#aebfff" />
+      <hemisphereLight args={['#2a3f72', '#05060d', 0.5]} />
       <directionalLight
-        position={[30, 45, 20]}
-        intensity={1.4}
+        position={[60, 95, -70]}
+        intensity={0.85}
+        color="#cdd9ff"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-60}
@@ -43,14 +66,22 @@ export function Experience() {
         shadow-camera-top={60}
         shadow-camera-bottom={-60}
         shadow-camera-near={1}
-        shadow-camera-far={200}
+        shadow-camera-far={260}
       />
 
       {/* Faint shimmer wall at the edge of the playable area (visual hint only) */}
       <WorldBorder />
 
-      {/* Physics world: islands + bridges are the only colliders; the void is empty. */}
+      {/* Anything that may stream assets (e.g. the cloud texture) lives under
+          <Suspense> so a load never throws for lack of a boundary. */}
       <Suspense fallback={null}>
+        {/* Night sky: gradient dome + starfield */}
+        <SkyDome />
+        <Stars radius={220} depth={60} count={6000} factor={5} saturation={0} fade speed={0.4} />
+        {/* Cloud sea far below the islands for a sense of depth */}
+        <CloudLayer />
+
+        {/* Physics world: islands + bridges are the only colliders; void is empty. */}
         <Physics gravity={[0, WORLD.GRAVITY, 0]}>
           {content.islands.map((island) => (
             <Island key={island.id} island={island} />

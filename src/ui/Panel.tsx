@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { PanelContent } from '../content'
 import { asset } from '../lib/paths'
+import { Lines } from './Lines'
 
 // The HTML/DOM overlay shown when you interact with an island (press E) or click
 // a persistent button. Pure DOM — not 3D text — so it's crisp and accessible.
@@ -58,7 +59,9 @@ export function Panel({
                   className={`project${focusKey === key ? ' is-focused' : ''}`}
                 >
                   <div className="project__head">
-                    <h3 className="project__name">{proj.name}</h3>
+                    <h3 className="project__name">
+                      <Lines text={proj.name} />
+                    </h3>
                     {proj.date && <span className="project__date">{proj.date}</span>}
                   </div>
                   {proj.description && <p className="project__desc">{proj.description}</p>}

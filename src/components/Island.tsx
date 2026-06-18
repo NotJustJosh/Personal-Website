@@ -15,7 +15,8 @@ import { OrbitingItems } from './OrbitingItems'
 //   • a billboarded 3D label (panels themselves are DOM — see ui/Panel.tsx),
 //   • an optional .glb model placeholder (set `model` in content.ts).
 
-const THICKNESS = ISLAND.THICKNESS
+const THICKNESS = ISLAND.THICKNESS // visual slab thickness
+const COLLIDER_DEPTH = 4 // physics collider depth (deeper than the slab; anti-tunnel)
 
 // Optional .glb set dressing. Only mounted when `model` is set in content.ts.
 function ModelDressing({ url }: { url: string }) {
@@ -32,7 +33,9 @@ export function Island({ island }: { island: IslandData }) {
     <group position={[x, y, z]}>
       {/* Physics: a cylinder whose top sits at local y = 0 (world surface = y). */}
       <RigidBody type="fixed" colliders={false} friction={1}>
-        <CylinderCollider args={[THICKNESS / 2, radius]} position={[0, -THICKNESS / 2, 0]} />
+        {/* Collider is deeper than the visual slab (top still at the surface) so
+            a fast fall can never tunnel through it. */}
+        <CylinderCollider args={[COLLIDER_DEPTH / 2, radius]} position={[0, -COLLIDER_DEPTH / 2, 0]} />
 
         {/* Top slab */}
         <mesh position={[0, -THICKNESS / 2, 0]} receiveShadow castShadow>
@@ -77,11 +80,11 @@ export function Island({ island }: { island: IslandData }) {
       <Billboard position={[0, 3.8, 0]}>
         <Text
           fontSize={0.9}
-          color="#1a2233"
+          color="#eef2ff"
           anchorX="center"
           anchorY="middle"
           outlineWidth={0.04}
-          outlineColor="#ffffff"
+          outlineColor="#05070f"
         >
           {island.label}
         </Text>
