@@ -51,6 +51,8 @@ export interface LinkItem {
 
 export interface Project {
   name: string
+  /** Label shown on the orbiting bubble in the 3D world. Defaults to `name`. */
+  short?: string
   /** Optional — omit for compact entries like Honors. */
   description?: string
   /** When it happened, e.g. "2024" or "May–Aug 2024". Shown next to the title. */
@@ -156,7 +158,7 @@ export const content: SiteContent = {
     {
       id: 'projects',
       label: 'Projects',
-      position: [34, 5, 8],
+      position: [34, 3, 8],
       accentColor: '#ffb703',
       neighbors: ['experience'],
       orbit: true,
@@ -238,7 +240,7 @@ export const content: SiteContent = {
     {
       id: 'experience',
       label: 'Experience',
-      position: [8, -4, 34],
+      position: [8, 2, 34],
       accentColor: '#9d6bff',
       neighbors: [],
       orbit: true,
@@ -279,7 +281,7 @@ export const content: SiteContent = {
     {
       id: 'contact',
       label: 'Contact',
-      position: [-32, 8, 12],
+      position: [-32, 4, 12],
       accentColor: '#90be6d',
       neighbors: ['resume', 'experience'],
       content: {
@@ -297,7 +299,7 @@ export const content: SiteContent = {
     {
       id: 'resume',
       label: 'Resume',
-      position: [-12, 3, -32],
+      position: [-12, 1, -32],
       accentColor: '#ef476f',
       neighbors: [],
       content: {
@@ -310,7 +312,7 @@ export const content: SiteContent = {
     {
       id: 'honors',
       label: 'Honors',
-      position: [32, -2, -12],
+      position: [32, 2, -12],
       accentColor: '#06d6a0',
       neighbors: ['resume', 'projects', 'about'],
       // Honors is a compact list: names + dates only (no descriptions, no body).

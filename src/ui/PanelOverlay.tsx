@@ -19,5 +19,12 @@ export function PanelOverlay() {
     if (item) focusKey = `${item.kind}-${item.index}`
   }
 
-  return <Panel data={islandPanel(island)} focusKey={focusKey} onClose={closePanel} />
+  return (
+    <Panel
+      data={islandPanel(island)}
+      focusKey={focusKey}
+      accentColor={island.accentColor}
+      onClose={closePanel}
+    />
+  )
 }

@@ -91,6 +91,8 @@ export interface IslandItem {
   kind: 'project' | 'link'
   /** Display label (project name or link label). */
   label: string
+  /** Optional override for the orbiting bubble label (projects' `short`). */
+  short?: string
   /** Short glyph for the orbiting icon (defaults to the item number). */
   icon: string
 }
@@ -103,6 +105,7 @@ export function islandItems(island: Island): IslandItem[] {
       index: i,
       kind: 'project' as const,
       label: p.name,
+      short: p.short,
       icon: p.icon ?? String(i + 1),
     }))
   }

@@ -324,6 +324,81 @@ kbd {
   border: 1px solid var(--panel-border);
   border-radius: 999px;
 }
+
+/* Color-coded tag chips + filter bar + category legend */
+.chip {
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  padding: 3px 11px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+.chip:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.chip--sm {
+  font-size: 0.74rem;
+  padding: 2px 9px;
+}
+.chip--clear {
+  border-color: var(--panel-border) !important;
+  color: var(--muted) !important;
+  background: transparent !important;
+}
+.tagbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.tagbar__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.tagbar__btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+.tagbar__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+}
+.tag-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.tag-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tag-legend__item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .project__links {
   display: flex;
   flex-wrap: wrap;
@@ -517,19 +592,26 @@ kbd {
   white-space: nowrap;
 }
 
-/* Item opened from an orbiting icon — scroll target + yellow highlight */
+/* Item opened from an orbiting icon — scroll target + highlight in the island
+   accent color (--accent is set on the .panel; falls back to amber). */
 .project.is-focused {
-  background: rgba(255, 214, 10, 0.14);
-  box-shadow: 0 0 0 2px #ffd60a, 0 0 26px rgba(255, 214, 10, 0.4);
+  background: color-mix(in srgb, var(--accent, #ffd60a) 14%, transparent);
+  box-shadow:
+    0 0 0 2px var(--accent, #ffd60a),
+    0 0 26px color-mix(in srgb, var(--accent, #ffd60a) 45%, transparent);
   animation: focus-pop 0.5s ease;
 }
 .btn.is-focused {
-  box-shadow: 0 0 0 3px #ffd60a, 0 0 22px rgba(255, 214, 10, 0.45);
+  box-shadow:
+    0 0 0 3px var(--accent, #ffd60a),
+    0 0 22px color-mix(in srgb, var(--accent, #ffd60a) 50%, transparent);
   animation: focus-pop 0.5s ease;
 }
 @keyframes focus-pop {
   from {
-    box-shadow: 0 0 0 6px #ffd60a, 0 0 44px rgba(255, 214, 10, 0.7);
+    box-shadow:
+      0 0 0 6px var(--accent, #ffd60a),
+      0 0 44px color-mix(in srgb, var(--accent, #ffd60a) 70%, transparent);
   }
 }
 

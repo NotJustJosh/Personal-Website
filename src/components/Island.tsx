@@ -6,6 +6,8 @@ import { islandRadius, islandHasOrbit } from '../lib/world'
 import { useModel, modelUrl } from '../lib/gltf'
 import { ISLAND } from '../config'
 import { OrbitingItems } from './OrbitingItems'
+import { TagPuffs } from './TagPuffs'
+import { Waypoint } from './Waypoint'
 
 // A single floating island, generated entirely from its data entry:
 //   • a static cylinder physics collider (the only thing you can stand on),
@@ -59,22 +61,15 @@ export function Island({ island }: { island: IslandData }) {
         decay={2}
       />
 
-      {/* Optional set-dressing model, or a small placeholder accent crystal */}
-      {island.model ? (
+      {/* Optional extra set-dressing model */}
+      {island.model && (
         <Suspense fallback={null}>
           <ModelDressing url={island.model} />
         </Suspense>
-      ) : (
-        <mesh position={[0, 1.6, 0]} castShadow>
-          <octahedronGeometry args={[0.9, 0]} />
-          <meshStandardMaterial
-            color={island.accentColor}
-            emissive={island.accentColor}
-            emissiveIntensity={0.4}
-            roughness={0.3}
-          />
-        </mesh>
       )}
+
+      {/* Centerpiece: pedestal + glowing spinning/bobbing cube */}
+      <Waypoint accentColor={island.accentColor} />
 
       {/* Floating label, always facing the camera */}
       <Billboard position={[0, 3.8, 0]}>
@@ -90,8 +85,14 @@ export function Island({ island }: { island: IslandData }) {
         </Text>
       </Billboard>
 
-      {/* Item icons that orbit the island while you're standing on it */}
-      {islandHasOrbit(island) && <OrbitingItems island={island} />}
+      {/* Item icons that orbit the island while you're standing on it, plus the
+          tag-puff effect when you're next to one */}
+      {islandHasOrbit(island) && (
+        <>
+          <OrbitingItems island={island} />
+          <TagPuffs island={island} />
+        </>
+      )}
     </group>
   )
 }

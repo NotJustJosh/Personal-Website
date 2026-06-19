@@ -5,7 +5,7 @@ import { Physics } from '@react-three/rapier'
 import { Player } from '../components/Player'
 import { CameraRig } from '../components/CameraRig'
 import { Island } from '../components/Island'
-import { Bridge } from '../components/Bridge'
+import { RopeBridge } from '../components/RopeBridge'
 import { WorldBorder } from '../components/WorldBorder'
 import { SkyDome } from '../components/SkyDome'
 import { CloudLayer } from '../components/CloudLayer'
@@ -87,7 +87,7 @@ export function Experience() {
             <Island key={island.id} island={island} />
           ))}
           {bridges.map((b) => (
-            <Bridge key={`${b.a.id}::${b.b.id}`} a={b.a} b={b.b} />
+            <RopeBridge key={`${b.a.id}::${b.b.id}`} a={b.a} b={b.b} />
           ))}
 
           <Player targetRef={playerPos} />

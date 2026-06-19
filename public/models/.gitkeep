@@ -1,0 +1,5 @@
+# Drop your Blender exports here as binary glTF (.glb):
+#   public/models/post.glb    — the bridge post
+#   public/models/plank.glb   — the bridge plank/slat
+# (Export from Blender: File → Export → glTF 2.0 (.glb). Materials optional —
+#  the site applies its own. Then the rope bridges will use these meshes.)

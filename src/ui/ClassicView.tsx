@@ -1,11 +1,42 @@
+import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { content } from '../content'
 import { asset } from '../lib/paths'
 import { islandPanel } from '../lib/world'
 import type { PanelContent } from '../content'
 import { Lines } from './Lines'
+import { CATEGORY_META, tagCategory, tagColor } from '../lib/tags'
+import type { TagCategory } from '../lib/tags'
 
-// Renders one section (title → body → project cards → links). Works for any island.
+const CATEGORY_ORDER: TagCategory[] = ['field', 'tool', 'method', 'general']
+
+function chipStyle(tag: string, active: boolean): CSSProperties {
+  const c = tagColor(tag)
+  return active
+    ? { background: c, borderColor: c, color: '#0b1020' }
+    : { borderColor: c, color: c, background: `color-mix(in srgb, ${c} 14%, transparent)` }
+}
+
+// Renders one section (title → body → project cards → links). Tags are
+// color-coded by category and clickable to filter this section's entries.
 function Section({ id, data }: { id: string; data: PanelContent }) {
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const projects = data.projects ?? []
+
+  const uniqueTags = useMemo(() => {
+    const set = new Set<string>()
+    projects.forEach((p) => p.tags?.forEach((t) => set.add(t)))
+    return [...set]
+  }, [projects])
+  const presentCategories = useMemo(() => {
+    const s = new Set<TagCategory>(uniqueTags.map(tagCategory))
+    return CATEGORY_ORDER.filter((c) => s.has(c))
+  }, [uniqueTags])
+
+  const shown = activeTag ? projects.filter((p) => p.tags?.includes(activeTag)) : projects
+  const toggle = (t: string) => setActiveTag((cur) => (cur === t ? null : t))
+
   return (
     <section className="classic__section" id={`section-${id}`}>
       <h2>{data.title}</h2>
@@ -14,9 +45,60 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
         <p key={i}>{paragraph}</p>
       ))}
 
-      {data.projects && (
+      {projects.length > 0 && uniqueTags.length > 0 && (
+        <div className="tagbar">
+          <div className="tagbar__bar">
+            <button
+              className="btn btn--ghost tagbar__btn"
+              onClick={() => setFilterOpen((o) => !o)}
+              aria-expanded={filterOpen}
+            >
+              Filter by tag ▾
+            </button>
+            {activeTag && (
+              <button
+                className="chip"
+                style={chipStyle(activeTag, true)}
+                onClick={() => setActiveTag(null)}
+                title="Clear filter"
+              >
+                {activeTag} ✕
+              </button>
+            )}
+          </div>
+          {filterOpen && (
+            <div className="tagbar__menu">
+              <div className="tag-legend">
+                {presentCategories.map((c) => (
+                  <span key={c} className="tag-legend__item">
+                    <i style={{ background: CATEGORY_META[c].color }} />
+                    {CATEGORY_META[c].label}
+                  </span>
+                ))}
+              </div>
+              <div className="tag-filter">
+                {uniqueTags.map((t) => (
+                  <button
+                    key={t}
+                    className="chip"
+                    style={chipStyle(t, activeTag === t)}
+                    onClick={() => {
+                      toggle(t)
+                      setFilterOpen(false)
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {projects.length > 0 && (
         <div className="classic__projects">
-          {data.projects.map((proj) => (
+          {shown.map((proj) => (
             <article key={proj.name} className="project">
               <div className="project__head">
                 <h3 className="project__name">
@@ -26,21 +108,23 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
               </div>
               {proj.description && <p className="project__desc">{proj.description}</p>}
               {proj.tags && (
-                <ul className="project__tags">
+                <div className="project__tags">
                   {proj.tags.map((tag) => (
-                    <li key={tag}>{tag}</li>
+                    <button
+                      key={tag}
+                      className="chip chip--sm"
+                      style={chipStyle(tag, activeTag === tag)}
+                      onClick={() => toggle(tag)}
+                    >
+                      {tag}
+                    </button>
                   ))}
-                </ul>
+                </div>
               )}
               {proj.links && (
                 <div className="project__links">
                   {proj.links.map((link) => (
-                    <a
-                      key={link.url}
-                      href={asset(link.url)}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
+                    <a key={link.url} href={asset(link.url)} target="_blank" rel="noreferrer noopener">
                       {link.label}
                     </a>
                   ))}
@@ -82,7 +166,6 @@ export function ClassicView({
 }) {
   return (
     <div className="classic">
-      {/* Sticky nav generated from the islands */}
       <header className="classic__nav">
         <a className="classic__brand" href="#top">
           <strong>{content.name}</strong>
