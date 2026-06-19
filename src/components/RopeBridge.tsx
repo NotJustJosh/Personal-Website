@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import { useGLTF, Instances, Instance } from '@react-three/drei'
 import type { Island } from '../content'
-import { modelUrl } from '../lib/gltf'
+import { modelUrl, useBakedGeometry } from '../lib/gltf'
 import { islandRadius } from '../lib/world'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,34 +63,43 @@ function hashString(s: string) {
   return h % 1000
 }
 
-// Load a GLB, bake its node transform into the geometry (so proportions are
-// final), and re-anchor it: 'base' puts the bottom at y=0, 'top' the top at y=0,
-// both centered on x/z. Computed once per (model, anchor); shared by all bridges.
-function useBakedGeometry(path: string, anchor: 'base' | 'top') {
-  const { scene } = useGLTF(modelUrl(path))
-  return useMemo(() => {
-    scene.updateMatrixWorld(true)
-    let mesh: THREE.Mesh | undefined
-    scene.traverse((o) => {
-      if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh
-    })
-    const geometry = mesh!.geometry.clone()
-    geometry.applyMatrix4(mesh!.matrixWorld)
-    geometry.computeBoundingBox()
-    const bb = geometry.boundingBox!
-    const cx = (bb.min.x + bb.max.x) / 2
-    const cz = (bb.min.z + bb.max.z) / 2
-    const ty = anchor === 'base' ? -bb.min.y : -bb.max.y
-    geometry.translate(-cx, ty, -cz)
-    geometry.computeBoundingBox()
-    const size = new THREE.Vector3()
-    geometry.boundingBox!.getSize(size)
-    return { geometry, size }
-  }, [scene, anchor])
-}
-
 function tubeFromPoints(points: THREE.Vector3[], radius: number, segments: number) {
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), segments, radius, 6, false)
+}
+
+// Merge several indexed geometries (all with position/normal/uv) into one, using
+// only the main `three` build — avoids the 'three/examples/jsm' deep import that
+// previously duplicated three in the production bundle. Collapses a bridge's many
+// rope tubes into a single draw call.
+function mergeGeoms(geoms: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  let vTotal = 0
+  let iTotal = 0
+  for (const g of geoms) {
+    vTotal += g.attributes.position.count
+    iTotal += g.index ? g.index.count : 0
+  }
+  const pos = new Float32Array(vTotal * 3)
+  const nor = new Float32Array(vTotal * 3)
+  const uv = new Float32Array(vTotal * 2)
+  const idx = new Uint32Array(iTotal)
+  let vOff = 0
+  let iOff = 0
+  for (const g of geoms) {
+    const vc = g.attributes.position.count
+    pos.set(g.attributes.position.array as ArrayLike<number>, vOff * 3)
+    nor.set(g.attributes.normal.array as ArrayLike<number>, vOff * 3)
+    uv.set(g.attributes.uv.array as ArrayLike<number>, vOff * 2)
+    const gi = g.index!.array
+    for (let k = 0; k < gi.length; k++) idx[iOff + k] = gi[k] + vOff
+    vOff += vc
+    iOff += gi.length
+  }
+  const out = new THREE.BufferGeometry()
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3))
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+  out.setIndex(new THREE.BufferAttribute(idx, 1))
+  return out
 }
 
 export function RopeBridge({ a, b }: { a: Island; b: Island }) {
@@ -305,7 +314,10 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
       })
     }
 
-    return { planks, posts, ropeGeoms, segments }
+    const ropes = mergeGeoms(ropeGeoms)
+    ropeGeoms.forEach((g) => g.dispose())
+
+    return { planks, posts, ropes, segments }
   }, [a, b, plankDepth])
 
   return (
@@ -340,15 +352,16 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
         ))}
       </Instances>
 
-      {/* Posts (a pair at each end), chunky */}
-      {geom.posts.map((pos, i) => (
-        <mesh key={i} geometry={post.geometry} material={woodMat} position={pos} scale={postScale} castShadow />
-      ))}
+      {/* Posts (a pair at each end), chunky — instanced (1 draw call) */}
+      <Instances geometry={post.geometry} material={woodMat} limit={8} castShadow>
+        {geom.posts.map((pos, i) => (
+          <Instance key={i} position={pos} scale={postScale} />
+        ))}
+      </Instances>
 
-      {/* Ropes: handrails + edge ropes + vertical ties */}
-      {geom.ropeGeoms.map((g, i) => (
-        <mesh key={i} geometry={g} material={ropeMat} castShadow />
-      ))}
+      {/* Ropes: all handrails/edges/ties merged into one mesh (1 draw call).
+          Thin ropes don't cast shadows — keeps them out of the shadow pass. */}
+      <mesh geometry={geom.ropes} material={ropeMat} />
     </group>
   )
 }

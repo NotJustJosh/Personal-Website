@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,4 +34,34 @@ export function useModel(url: string) {
 /** Start downloading a model ahead of time (call at module scope). */
 export function preloadModel(url: string) {
   useGLTF.preload(url, DRACO_DECODER_PATH)
+}
+
+/**
+ * Load a GLB (under /public) and return its first mesh's geometry, with the
+ * node transform BAKED in (final proportions) and re-anchored: 'base' puts the
+ * bottom at y=0, 'top' the top at y=0; both centered on x/z. Also returns the
+ * world-space bounding-box `size` so callers can scale it to fit. Computed once
+ * per (path, anchor) and shared across instances (useGLTF caches the scene).
+ */
+export function useBakedGeometry(path: string, anchor: 'base' | 'top') {
+  const { scene } = useGLTF(modelUrl(path))
+  return useMemo(() => {
+    scene.updateMatrixWorld(true)
+    let mesh: THREE.Mesh | undefined
+    scene.traverse((o) => {
+      if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh
+    })
+    const geometry = mesh!.geometry.clone()
+    geometry.applyMatrix4(mesh!.matrixWorld)
+    geometry.computeBoundingBox()
+    const bb = geometry.boundingBox!
+    const cx = (bb.min.x + bb.max.x) / 2
+    const cz = (bb.min.z + bb.max.z) / 2
+    const ty = anchor === 'base' ? -bb.min.y : -bb.max.y
+    geometry.translate(-cx, ty, -cz)
+    geometry.computeBoundingBox()
+    const size = new THREE.Vector3()
+    geometry.boundingBox!.getSize(size)
+    return { geometry, size }
+  }, [scene, anchor])
 }

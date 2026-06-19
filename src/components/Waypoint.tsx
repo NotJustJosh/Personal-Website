@@ -55,7 +55,7 @@ function PedestalModel({ path }: { path: string }) {
     clone.updateMatrixWorld(true)
     const box = new THREE.Box3().setFromObject(clone)
     clone.position.y -= box.min.y // base on the surface
-    const mat = new THREE.MeshStandardMaterial({ color: '#7a818f', roughness: 0.95 })
+    const mat = new THREE.MeshStandardMaterial({ color: '#c4c9d2', roughness: 0.9 })
     clone.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
         ;(o as THREE.Mesh).material = mat

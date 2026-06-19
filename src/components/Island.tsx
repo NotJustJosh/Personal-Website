@@ -1,62 +1,64 @@
 import { Suspense } from 'react'
-import { Text, Billboard } from '@react-three/drei'
+import { Text, Billboard, useGLTF } from '@react-three/drei'
 import { RigidBody, CylinderCollider } from '@react-three/rapier'
 import type { Island as IslandData } from '../content'
 import { islandRadius, islandHasOrbit } from '../lib/world'
-import { useModel, modelUrl } from '../lib/gltf'
-import { ISLAND } from '../config'
+import { useModel, modelUrl, useBakedGeometry } from '../lib/gltf'
 import { OrbitingItems } from './OrbitingItems'
 import { TagPuffs } from './TagPuffs'
 import { Waypoint } from './Waypoint'
+import { Grass } from './Grass'
 
-// A single floating island, generated entirely from its data entry:
-//   • a static cylinder physics collider (the only thing you can stand on),
-//   • a visual slab whose TOP surface sits exactly at island.position.y,
-//   • a tapered underside for the "floating rock" look,
-//   • an accent point-light washing the space in the island's color,
-//   • a billboarded 3D label (panels themselves are DOM — see ui/Panel.tsx),
-//   • an optional .glb model placeholder (set `model` in content.ts).
+// A single floating island, generated from its data entry:
+//   • the user's island.glb as the visual body (auto-scaled to `size`, top at
+//     island.position.y), with a cylinder physics collider (what you stand on),
+//   • a touch of procedural grass on top,
+//   • an accent point-light washing the island in its color,
+//   • a pedestal + glowing cube centerpiece, a floating label, and (if it has
+//     items) the orbiting icons + tag-puffs.
 
-const THICKNESS = ISLAND.THICKNESS // visual slab thickness
-const COLLIDER_DEPTH = 4 // physics collider depth (deeper than the slab; anti-tunnel)
+const COLLIDER_DEPTH = 4 // physics collider depth (deeper than the model; anti-tunnel)
+const ISLAND_COLOR = '#867c64' // natural earthy tone (the accent light tints it)
 
-// Optional .glb set dressing. Only mounted when `model` is set in content.ts.
+// Optional extra .glb set dressing. Only mounted when `model` is set in content.ts.
 function ModelDressing({ url }: { url: string }) {
   const { scene } = useModel(modelUrl(url))
   return <primitive object={scene} />
 }
 
+// The island.glb body, scaled so its horizontal radius matches `radius` and its
+// top sits at the surface (local y = 0).
+function IslandModel({ radius }: { radius: number }) {
+  const { geometry, size } = useBakedGeometry('models/island.glb', 'top')
+  const scale = radius / Math.max(size.x / 2, 1e-3)
+  return (
+    <mesh geometry={geometry} scale={scale} castShadow receiveShadow>
+      <meshStandardMaterial color={ISLAND_COLOR} roughness={1} metalness={0} />
+    </mesh>
+  )
+}
+
 export function Island({ island }: { island: IslandData }) {
   const [x, y, z] = island.position
   const radius = islandRadius(island)
-  const coneHeight = radius * 1.4
 
   return (
     <group position={[x, y, z]}>
-      {/* Physics: a cylinder whose top sits at local y = 0 (world surface = y). */}
+      {/* Physics + visual body */}
       <RigidBody type="fixed" colliders={false} friction={1}>
-        {/* Collider is deeper than the visual slab (top still at the surface) so
-            a fast fall can never tunnel through it. */}
+        {/* Deep cylinder collider; its top is at the surface (local y = 0). */}
         <CylinderCollider args={[COLLIDER_DEPTH / 2, radius]} position={[0, -COLLIDER_DEPTH / 2, 0]} />
-
-        {/* Top slab */}
-        <mesh position={[0, -THICKNESS / 2, 0]} receiveShadow castShadow>
-          <cylinderGeometry args={[radius, radius, THICKNESS, 48]} />
-          <meshStandardMaterial color={island.accentColor} roughness={0.85} metalness={0.05} />
-        </mesh>
-
-        {/* Tapered underside (decorative, no collision) */}
-        <mesh position={[0, -THICKNESS - coneHeight / 2, 0]} rotation={[Math.PI, 0, 0]}>
-          <coneGeometry args={[radius * 0.92, coneHeight, 36]} />
-          <meshStandardMaterial color={island.accentColor} roughness={1} metalness={0} />
-        </mesh>
+        <IslandModel radius={radius} />
       </RigidBody>
+
+      {/* A tasteful scatter of grass across the top */}
+      <Grass radius={radius} />
 
       {/* Accent light washing the island in its color */}
       <pointLight
         position={[0, 4, 0]}
         color={island.accentColor}
-        intensity={18}
+        intensity={11}
         distance={radius * 4}
         decay={2}
       />
@@ -85,8 +87,7 @@ export function Island({ island }: { island: IslandData }) {
         </Text>
       </Billboard>
 
-      {/* Item icons that orbit the island while you're standing on it, plus the
-          tag-puff effect when you're next to one */}
+      {/* Orbiting item icons + tag-puffs (only while you're on the island) */}
       {islandHasOrbit(island) && (
         <>
           <OrbitingItems island={island} />
@@ -96,3 +97,5 @@ export function Island({ island }: { island: IslandData }) {
     </group>
   )
 }
+
+useGLTF.preload(modelUrl('models/island.glb'))
