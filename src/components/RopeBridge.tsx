@@ -24,6 +24,7 @@ import { islandRadius } from '../lib/world'
 
 // ── Tunables ─────────────────────────────────────────────────────────────────
 const WALKWAY = 2.2 // deck width (world units)
+const POST_INSET = 2 // pull endpoints in from the rim so posts sit firmly on the island
 const POST_HEIGHT = 1.05 // ~waist height vs the ~1.8-unit player
 const POST_THICK = 0.42 // post cross-section (chunky, independent of height)
 const PLANK_GAP = 0.14 // gap between plank slats
@@ -150,8 +151,10 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     const hz = dzC / horizC
 
     // Endpoints at the island RIMS.
-    const A = new THREE.Vector3(a.position[0] + hx * Ra, a.position[1], a.position[2] + hz * Ra)
-    const B = new THREE.Vector3(b.position[0] - hx * Rb, b.position[1], b.position[2] - hz * Rb)
+    const ea = Math.max(0, Ra - POST_INSET)
+    const eb = Math.max(0, Rb - POST_INSET)
+    const A = new THREE.Vector3(a.position[0] + hx * ea, a.position[1], a.position[2] + hz * ea)
+    const B = new THREE.Vector3(b.position[0] - hx * eb, b.position[1], b.position[2] - hz * eb)
     const dx = B.x - A.x
     const dy = B.y - A.y
     const dz = B.z - A.z
@@ -164,10 +167,27 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
       Math.min(DECK_SAG_MAX, horiz * DECK_SAG_FACTOR) *
       THREE.MathUtils.clamp(1 - Math.abs(dy) / horiz, 0.4, 1)
 
+    // Deck profile: FLAT landings on each island + a PARABOLIC droop over the gap.
+    //   • flat near the ends → posts sit firmly on the island, the deck meets the
+    //     island level (walkable, no clipping into the base);
+    //   • parabola in the middle → it hangs naturally, like a real rope bridge.
+    const L = Math.hypot(horiz, dy) || 1
+    const flat = THREE.MathUtils.clamp(POST_INSET / L, 0.04, 0.2) // flat fraction per end
+    const sagProfile = (t: number) => {
+      if (t <= flat || t >= 1 - flat) return 0
+      const u = (t - flat) / (1 - 2 * flat)
+      return 4 * u * (1 - u) // 0 at the rims, 1 at mid-span
+    }
     const deckAt = (t: number, out: THREE.Vector3) =>
-      out.set(A.x + dx * t, A.y + dy * t - sag * 4 * t * (1 - t), A.z + dz * t)
-    const tangentAt = (t: number, out: THREE.Vector3) =>
-      out.set(dx, dy - sag * 4 * (1 - 2 * t), dz).normalize()
+      out.set(A.x + dx * t, A.y + dy * t - sag * sagProfile(t), A.z + dz * t)
+    // Tangent via finite difference (robust across the piecewise profile).
+    const _ta = new THREE.Vector3()
+    const _tb = new THREE.Vector3()
+    const tangentAt = (t: number, out: THREE.Vector3) => {
+      deckAt(Math.min(1, t + 0.001), _ta)
+      deckAt(Math.max(0, t - 0.001), _tb)
+      return out.subVectors(_ta, _tb).normalize()
+    }
 
     // ── Planks (with per-plank variation) ─────────────────────────────────────
     const seed = hashString(a.id + '-' + b.id)
@@ -231,7 +251,7 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
           A.y + dy * t,
           A.z + dz * t + across.z * half * side,
         ).add(railOffset)
-        v.y -= handrailSag * 4 * t * (1 - t)
+        v.y -= handrailSag * sagProfile(t)
         pts.push(v)
       }
       return pts
@@ -266,7 +286,7 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
         )
         const top = new THREE.Vector3(
           A.x + dx * t + across.x * half * side,
-          A.y + dy * t - handrailSag * 4 * t * (1 - t),
+          A.y + dy * t - handrailSag * sagProfile(t),
           A.z + dz * t + across.z * half * side,
         ).add(railOffset)
         ropeGeoms.push(tubeFromPoints([bottom, top], ROPE_RADIUS * 0.7, 1))

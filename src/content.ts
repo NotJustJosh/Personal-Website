@@ -167,7 +167,8 @@ export const content: SiteContent = {
         body: ["A few things I've built or written."],
         projects: [
           {
-            name: 'Project: IMU-Based Hand Gesture Interface for 3D Design and Modeling',
+            name: 'IMU-Based Hand Gesture Interface for 3D Design and Modeling',
+            short: 'IMU Hand Gesture Interface for CAD',
             date: 'August 2025 - Present',
             description:
               `Developing a wearable glove-based input system using 9-axis IMU sensors to enable real-time 
@@ -182,7 +183,8 @@ export const content: SiteContent = {
             ],
           },
           {
-            name: 'Project: Deployable Solar Array for Small Satellites',
+            name: 'Deployable Solar Array for Small Satellites',
+            short: 'Satellite Solar Array',
             date: 'September 2025 - May 2026',
             description:
               `Designed Circuit Block Diagram and Schematic for a modular and configurable set of  
@@ -193,7 +195,7 @@ export const content: SiteContent = {
             // links: [{ label: 'Code', url: 'https://github.com/yourname/project-two' }],
           },
           {
-            name: 'Project: License Plate OCR Model',
+            name: 'License Plate OCR Model',
             date: 'May 2026 - June 2026',
             description:
               'License plate imaging pipeline for fog occlusions and low visibility settings using grayscaling, gaussian filtering, and unsharp masking',
@@ -204,7 +206,8 @@ export const content: SiteContent = {
             //],
           },
           {
-            name: 'Project: Terasic Spider Robot',
+            name: 'Terasic Spider Robot: Embedded Systems',
+            short: 'Spider Robot',
             date: 'May 2026 - June 2026',
             description:
               'Embedded Programming of DE10-nano FPGA, including PWM of servos and integration of sonar sensor.',
@@ -215,13 +218,15 @@ export const content: SiteContent = {
             //],
           },
           {
-            name: 'Project: Automation of Dechlorination Tools for Aqua Pennsylvania',
+            name: 'Automation of Dechlorination Tools for Aqua Pennsylvania',
+            short: 'Dechlorination Automation Tool',
             date: 'August 2024 - May 2025',
             description: ' Led development of automation solutions to improve water treatment efficiency that applied engineering principles to real-world challenges in partnership with Aqua Pennsylvania, a utility company; Co-created and taught an accredited class that developed and implemented real-world projects.',
-            tags: ['idk', 'Sensing Array'],
+            tags: ['Sensing Array'],
           },
           {
             name: 'Publication: Hide and Seek: A Multimodal Approach to Human Detection',
+            short: 'Human Detection through Facial Recognition Software',
             date: 'July 2024',
             description: `Investigated the results of integrating IR sensing, motion profiling, and mmWave sensing into an open source 
             facial recognition software with the goal of increasing accuracy in detecting occluded faces and darker skin tones. 
@@ -250,10 +255,11 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'Research Assistant: Microscale Acoustic and Photonic Systems Laboratory, Northeastern University',
+            short: 'MAPS Lab',
             date: 'Sep 2024 \– Present',
             description:
               'A short description of what it does, the problem it solves, and what makes it interesting.',
-            tags: ['React', 'TypeScript', 'WebGL'],
+            tags: [],
             links: [
               { label: 'Live', url: 'https://example.com' },
               { label: 'Code', url: 'https://github.com/yourname/project-one' },
@@ -264,14 +270,14 @@ export const content: SiteContent = {
             date: '2024',
             description:
               'Another project. Keep descriptions tight — one or two sentences works best.',
-            tags: ['Node', 'PostgreSQL'],
+            tags: [],
             links: [{ label: 'Code', url: 'https://github.com/yourname/project-two' }],
           },
           {
             name: 'Project Three',
             date: '2023',
             description: 'A side project, experiment, or research piece you are proud of.',
-            tags: ['Python', 'ML'],
+            tags: [],
           },
         ],
       },
@@ -289,7 +295,7 @@ export const content: SiteContent = {
         body: ['Want to get in touch? Pick whichever works for you.'],
         links: [
           { label: 'Email', url: 'mailto:joshua.y3141@gmail.com' },
-          // { label: 'GitHub', url: 'https://github.com/NotJustJosh' },
+          { label: 'GitHub', url: 'https://github.com/NotJustJosh' },
           { label: 'LinkedIn', url: 'https://www.linkedin.com/in/josh-yuen-a30a79322/' },
         ],
       },

@@ -5,70 +5,83 @@ import * as THREE from 'three'
 import { modelUrl } from '../lib/gltf'
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Island centerpiece: a pedestal with a glowing cube hovering above it that
-//  slowly spins and gently bobs.
+//  Island centerpiece: a marble base plate, a stone pedestal standing on it, and
+//  a glowing cube hovering above that slowly spins and gently bobs.
 //
-//  The pedestal model is `public/models/pedestal.glb`. As soon as that file is
-//  in place, set PEDESTAL_MODEL to its path below and the real mesh is used;
-//  until then a simple stone placeholder stands in.
+//  Models live in public/models/: base_plate_8.glb + pedestal.glb (no materials;
+//  we author them in code). The plate is auto-scaled to a fixed footprint and the
+//  pedestal is measured + stacked on top of it, so swapping either model just works.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PEDESTAL_MODEL: string | null = 'models/pedestal.glb'
+const PEDESTAL_MODEL = 'models/pedestal.glb'
+const BASE_PLATE_MODEL = 'models/base_plate_8.glb'
 
 const PEDESTAL_HEIGHT = 0.5 // small pedestal
+const PLATE_RADIUS = 2.8 // footprint of the marble base plate
 const CUBE_SIZE = 0.4
-const CUBE_BASE_Y = PEDESTAL_HEIGHT + 0.35 // hover height above the island surface
 const SPIN_SPEED = 0.7 // radians / second
 const BOB_SPEED = 1.5
 const BOB_AMP = 0.16
 
-// Simple stacked-stone pedestal used until pedestal.glb is provided.
-function PlaceholderPedestal() {
-  return (
-    <group>
-      <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.64, 0.74, 0.24, 24]} />
-        <meshStandardMaterial color="#717784" roughness={0.95} />
-      </mesh>
-      <mesh position={[0, 0.56, 0]} castShadow>
-        <cylinderGeometry args={[0.34, 0.42, 0.64, 20]} />
-        <meshStandardMaterial color="#828a99" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.98, 0]} castShadow>
-        <cylinderGeometry args={[0.52, 0.44, 0.18, 24]} />
-        <meshStandardMaterial color="#717784" roughness={0.95} />
-      </mesh>
-    </group>
-  )
-}
+function Centerpiece({ accentColor }: { accentColor: string }) {
+  const plateScene = useGLTF(modelUrl(BASE_PLATE_MODEL)).scene
+  const pedestalScene = useGLTF(modelUrl(PEDESTAL_MODEL)).scene
 
-// Real pedestal model (only mounted when PEDESTAL_MODEL is set). Auto-scaled so
-// its height matches the placeholder, base on the island surface.
-function PedestalModel({ path }: { path: string }) {
-  const { scene } = useGLTF(modelUrl(path))
-  const object = useMemo(() => {
-    const clone = scene.clone(true)
-    clone.updateMatrixWorld(true)
-    const size = new THREE.Vector3()
-    new THREE.Box3().setFromObject(clone).getSize(size)
-    clone.scale.setScalar(PEDESTAL_HEIGHT / Math.max(size.y, 1e-3))
-    clone.updateMatrixWorld(true)
-    const box = new THREE.Box3().setFromObject(clone)
-    clone.position.y -= box.min.y // base on the surface
-    const mat = new THREE.MeshStandardMaterial({ color: '#c4c9d2', roughness: 0.9 })
-    clone.traverse((o) => {
+  // Build plate + pedestal once: scale the plate to PLATE_RADIUS, drop its base on
+  // the island surface, then stack the pedestal on the measured plate top.
+  const { object, pedestalTop } = useMemo(() => {
+    const root = new THREE.Group()
+
+    // Marble: matte stone base under a glossy clearcoat for a polished look.
+    // Shared by both the base plate and the pedestal.
+    const marble = new THREE.MeshPhysicalMaterial({
+      color: '#ece9e3',
+      roughness: 0.55,
+      metalness: 0,
+      clearcoat: 0.7,
+      clearcoatRoughness: 0.25,
+    })
+
+    // Base plate — uniform scale to the target footprint, base at the surface.
+    const plate = plateScene.clone(true)
+    plate.updateMatrixWorld(true)
+    const psize = new THREE.Vector3()
+    new THREE.Box3().setFromObject(plate).getSize(psize)
+    plate.scale.setScalar((PLATE_RADIUS * 2) / Math.max(psize.x, psize.z, 1e-3))
+    plate.updateMatrixWorld(true)
+    plate.position.y -= new THREE.Box3().setFromObject(plate).min.y
+    plate.updateMatrixWorld(true)
+    const plateTop = new THREE.Box3().setFromObject(plate).max.y
+    plate.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
-        ;(o as THREE.Mesh).material = mat
+        ;(o as THREE.Mesh).material = marble
         o.castShadow = true
         o.receiveShadow = true
       }
     })
-    return clone
-  }, [scene])
-  return <primitive object={object} />
-}
+    root.add(plate)
 
-export function Waypoint({ accentColor }: { accentColor: string }) {
+    // Pedestal — scale to PEDESTAL_HEIGHT, base resting on the plate top.
+    const ped = pedestalScene.clone(true)
+    ped.updateMatrixWorld(true)
+    const ssize = new THREE.Vector3()
+    new THREE.Box3().setFromObject(ped).getSize(ssize)
+    ped.scale.setScalar(PEDESTAL_HEIGHT / Math.max(ssize.y, 1e-3))
+    ped.updateMatrixWorld(true)
+    ped.position.y += plateTop - new THREE.Box3().setFromObject(ped).min.y
+    ped.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) {
+        ;(o as THREE.Mesh).material = marble
+        o.castShadow = true
+        o.receiveShadow = true
+      }
+    })
+    root.add(ped)
+
+    return { object: root, pedestalTop: plateTop + PEDESTAL_HEIGHT }
+  }, [plateScene, pedestalScene])
+
+  const cubeBaseY = pedestalTop + 0.35 // hover height above the pedestal top
   const cube = useRef<THREE.Group>(null)
 
   useFrame((state) => {
@@ -76,15 +89,15 @@ export function Waypoint({ accentColor }: { accentColor: string }) {
     if (!g) return
     const t = state.clock.elapsedTime
     g.rotation.y = t * SPIN_SPEED
-    g.position.y = CUBE_BASE_Y + Math.sin(t * BOB_SPEED) * BOB_AMP
+    g.position.y = cubeBaseY + Math.sin(t * BOB_SPEED) * BOB_AMP
   })
 
   return (
     <group>
-      {PEDESTAL_MODEL ? <PedestalModel path={PEDESTAL_MODEL} /> : <PlaceholderPedestal />}
+      <primitive object={object} />
 
       {/* Glowing, spinning, bobbing cube */}
-      <group ref={cube} position={[0, CUBE_BASE_Y, 0]}>
+      <group ref={cube} position={[0, cubeBaseY, 0]}>
         <mesh castShadow>
           <boxGeometry args={[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]} />
           <meshStandardMaterial
@@ -98,9 +111,14 @@ export function Waypoint({ accentColor }: { accentColor: string }) {
       </group>
 
       {/* Glow cast by the cube */}
-      <pointLight position={[0, CUBE_BASE_Y, 0]} color={accentColor} intensity={4} distance={6} decay={2} />
+      <pointLight position={[0, cubeBaseY, 0]} color={accentColor} intensity={4} distance={6} decay={2} />
     </group>
   )
 }
 
-if (PEDESTAL_MODEL) useGLTF.preload(modelUrl(PEDESTAL_MODEL))
+export function Waypoint({ accentColor }: { accentColor: string }) {
+  return <Centerpiece accentColor={accentColor} />
+}
+
+useGLTF.preload(modelUrl(PEDESTAL_MODEL))
+useGLTF.preload(modelUrl(BASE_PLATE_MODEL))

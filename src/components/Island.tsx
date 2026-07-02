@@ -5,9 +5,7 @@ import type { Island as IslandData } from '../content'
 import { islandRadius, islandHasOrbit } from '../lib/world'
 import { useModel, modelUrl, useBakedGeometry } from '../lib/gltf'
 import { OrbitingItems } from './OrbitingItems'
-import { TagPuffs } from './TagPuffs'
 import { Waypoint } from './Waypoint'
-import { Grass } from './Grass'
 
 // A single floating island, generated from its data entry:
 //   • the user's island.glb as the visual body (auto-scaled to `size`, top at
@@ -51,9 +49,6 @@ export function Island({ island }: { island: IslandData }) {
         <IslandModel radius={radius} />
       </RigidBody>
 
-      {/* A tasteful scatter of grass across the top */}
-      <Grass radius={radius} />
-
       {/* Accent light washing the island in its color */}
       <pointLight
         position={[0, 4, 0]}
@@ -87,13 +82,8 @@ export function Island({ island }: { island: IslandData }) {
         </Text>
       </Billboard>
 
-      {/* Orbiting item icons + tag-puffs (only while you're on the island) */}
-      {islandHasOrbit(island) && (
-        <>
-          <OrbitingItems island={island} />
-          <TagPuffs island={island} />
-        </>
-      )}
+      {/* Orbiting item icons (only while you're on the island) */}
+      {islandHasOrbit(island) && <OrbitingItems island={island} />}
     </group>
   )
 }

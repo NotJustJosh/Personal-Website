@@ -14,8 +14,9 @@ import { useGame } from '../store'
 //  panel focused on that item.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BASE_GLOW = 0.55
-const SELECTED_GLOW = 1.6
+// Dimmer than the centerpiece cube (emissiveIntensity 2.2 in Waypoint.tsx).
+const BASE_GLOW = 0.7
+const SELECTED_GLOW = 1.4
 
 // Trim noisy prefixes and cap length so the orbiting labels stay readable.
 function shortLabel(name: string) {
@@ -63,28 +64,23 @@ export function OrbitingItems({ island }: { island: Island }) {
           }}
           scale={0}
         >
-          <Billboard>
-            {/* glowing dot */}
-            <mesh>
-              <circleGeometry args={[0.5, 32]} />
-              <meshStandardMaterial
-                ref={(el) => {
-                  matRefs.current[i] = el
-                }}
-                color={island.accentColor}
-                emissive={island.accentColor}
-                emissiveIntensity={BASE_GLOW}
-                toneMapped={false}
-              />
-            </mesh>
-            {/* outline ring */}
-            <mesh position={[0, 0, -0.01]}>
-              <ringGeometry args={[0.5, 0.6, 32]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={0.85} toneMapped={false} />
-            </mesh>
-            {/* name label above the dot */}
+          {/* tiny glowing, vertically-elongated octahedron */}
+          <mesh scale={[1, 1.9, 1]}>
+            <octahedronGeometry args={[0.26, 0]} />
+            <meshStandardMaterial
+              ref={(el) => {
+                matRefs.current[i] = el
+              }}
+              color={island.accentColor}
+              emissive={island.accentColor}
+              emissiveIntensity={BASE_GLOW}
+              roughness={0.3}
+              toneMapped={false}
+            />
+          </mesh>
+          {/* name label above, always facing the camera */}
+          <Billboard position={[0, 0.85, 0]}>
             <Text
-              position={[0, 0.92, 0]}
               fontSize={0.34}
               maxWidth={7}
               textAlign="center"

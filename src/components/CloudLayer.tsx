@@ -15,45 +15,45 @@ export function CloudLayer() {
   return (
     <group>
       {/* Opaque backstop under the cloud sea — guarantees nothing shows beneath. */}
-      <mesh position={[0, -9, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={-2}>
+      <mesh position={[0, -28, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={-2}>
         <planeGeometry args={[600, 600]} />
         <meshBasicMaterial color={FOG_BASE} />
       </mesh>
 
-      {/* Dense, close cloud sea (top ≈ y -1, just below the lowest island). */}
+      {/* Dense cloud sea well below the islands (top ≈ y -17). */}
       <Clouds material={THREE.MeshBasicMaterial} limit={500} frustumCulled={false}>
         <Cloud
           seed={1}
-          position={[0, -5, 0]}
-          bounds={[200, 8, 200]}
+          position={[0, -22, 0]}
+          bounds={[220, 10, 220]}
           segments={64}
-          volume={180}
+          volume={200}
           color="#4a5a82"
           opacity={0.92}
           speed={0.05}
-          fade={220}
+          fade={240}
         />
         <Cloud
           seed={2}
-          position={[-45, -5, 35]}
-          bounds={[130, 7, 130]}
+          position={[-45, -22, 35]}
+          bounds={[140, 9, 140]}
           segments={34}
-          volume={90}
+          volume={100}
           color="#3c4a70"
           opacity={0.88}
           speed={0.04}
-          fade={220}
+          fade={240}
         />
         <Cloud
           seed={3}
-          position={[50, -5, -40]}
-          bounds={[130, 7, 130]}
+          position={[50, -22, -40]}
+          bounds={[140, 9, 140]}
           segments={34}
-          volume={90}
+          volume={100}
           color="#566699"
           opacity={0.88}
           speed={0.04}
-          fade={220}
+          fade={240}
         />
       </Clouds>
     </group>

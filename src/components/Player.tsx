@@ -91,20 +91,33 @@ export function Player({ targetRef }: PlayerProps) {
   const right = useRef(new THREE.Vector3())
   const move = useRef(new THREE.Vector3())
   const up = useRef(new THREE.Vector3(0, 1, 0))
+  const groundN = useRef(new THREE.Vector3())
 
   const lastNearby = useRef<IslandId | null>(null)
   const prevJump = useRef(false)
   const jumpsRemaining = useRef(MAX_JUMPS)
+  const airborneByJump = useRef(false) // set on jump, cleared on landing; gates ground movement
   const lastTeleportNonce = useRef(useGame.getState().teleportNonce)
 
+  // Spawn a few units behind the hub's pedestal (not on top of it). The starting
+  // camera looks toward +Z, so offsetting in -Z puts the pedestal/cube ahead.
   const spawn = spawnIsland()
-  const SPAWN_POS: [number, number, number] = [spawn.position[0], surfaceY(spawn), spawn.position[2]]
+  const SPAWN_POS: [number, number, number] = [
+    spawn.position[0],
+    surfaceY(spawn),
+    spawn.position[2] - 4,
+  ]
 
-  const isGrounded = (rb: RapierRigidBody): boolean => {
+  // Ground probe: are we on a surface, and what's its normal? The normal lets the
+  // player walk ALONG slopes (bridge droop, ramps) instead of into them.
+  const groundInfo = (rb: RapierRigidBody): { grounded: boolean; nx: number; ny: number; nz: number } => {
     const t = rb.translation()
     const ray = new rapier.Ray({ x: t.x, y: t.y, z: t.z }, { x: 0, y: -1, z: 0 })
-    const hit = world.castRay(ray, GROUND_RAY_LENGTH, true, undefined, undefined, undefined, rb)
-    return hit !== null && hit.timeOfImpact <= GROUNDED_THRESHOLD
+    const hit = world.castRayAndGetNormal(ray, GROUND_RAY_LENGTH, true, undefined, undefined, undefined, rb)
+    if (hit && hit.timeOfImpact <= GROUNDED_THRESHOLD) {
+      return { grounded: true, nx: hit.normal.x, ny: hit.normal.y, nz: hit.normal.z }
+    }
+    return { grounded: false, nx: 0, ny: 1, nz: 0 }
   }
 
   // Detect a nearby vertical surface by casting short horizontal rays. Used for
@@ -123,6 +136,7 @@ export function Player({ targetRef }: PlayerProps) {
     rb.setTranslation({ x: island.position[0], y: surfaceY(island), z: island.position[2] }, true)
     rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
     jumpsRemaining.current = MAX_JUMPS
+    airborneByJump.current = false
   }
 
   useFrame((state) => {
@@ -183,13 +197,36 @@ export function Player({ targetRef }: PlayerProps) {
       move.current.set(0, 0, 0)
       move.current.addScaledVector(forward.current, f)
       move.current.addScaledVector(right.current, r)
-      if (move.current.lengthSq() > 0) move.current.normalize().multiplyScalar(speed)
-      rb.setLinvel({ x: move.current.x, y: linvel.y, z: move.current.z }, true)
+      const moving = move.current.lengthSq() > 0
+      if (moving) move.current.normalize().multiplyScalar(speed)
 
       // Ground/wall state. Double jump resets when resting on a surface.
-      const grounded = isGrounded(rb)
+      const ground = groundInfo(rb)
+      const grounded = ground.grounded
       const onWall = !grounded && isOnWall(rb)
       if (grounded && linvel.y <= 0.05) jumpsRemaining.current = MAX_JUMPS
+
+      // A jump sets airborneByJump; it stays set until we've actually landed
+      // (grounded again, no upward velocity). Until then we never apply ground
+      // movement — otherwise it would zero the jump's lift-off on the frame or two
+      // where you're rising but the ground probe still reports you as grounded.
+      if (airborneByJump.current && grounded && linvel.y <= 0.01) airborneByJump.current = false
+      const groundedMove = grounded && !airborneByJump.current
+
+      if (groundedMove && moving) {
+        // Follow the surface: project the move onto the ground plane so you climb
+        // / descend bridges + ramps instead of pushing horizontally into them.
+        groundN.current.set(ground.nx, ground.ny, ground.nz)
+        move.current.projectOnPlane(groundN.current)
+        if (move.current.lengthSq() > 1e-6) move.current.setLength(speed)
+        rb.setLinvel({ x: move.current.x, y: move.current.y, z: move.current.z }, true)
+      } else if (groundedMove) {
+        // Grounded + idle: stop dead (no sliding down slopes / off bridges).
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      } else {
+        // Airborne (or mid-jump): horizontal control, gravity/jump handle Y.
+        rb.setLinvel({ x: move.current.x, y: linvel.y, z: move.current.z }, true)
+      }
 
       // Wall cling: cap the descent speed so you "stick" and can climb the wall.
       const slideVel = rb.linvel()
@@ -203,6 +240,7 @@ export function Player({ targetRef }: PlayerProps) {
       if (jumpHeld && !prevJump.current && canJump) {
         const cur = rb.linvel()
         rb.setLinvel({ x: cur.x, y: JUMP_SPEED, z: cur.z }, true)
+        airborneByJump.current = true
         if (!onWall) jumpsRemaining.current -= 1 // clinging → free, infinite jumps
       }
       prevJump.current = jumpHeld

@@ -33,22 +33,12 @@ export function Experience() {
 
   return (
     <>
-      {/* Moon (also marks the light direction) — plain meshes, no async load */}
-      <group position={[60, 95, -70]}>
+      {/* Moon — low in the sky (near the horizon) so it's visible at the camera's
+          clamped pitch. Decorative; the directional light below shares its side. */}
+      <group position={[150, 50, 150]}>
         <mesh>
-          <sphereGeometry args={[7, 32, 32]} />
-          <meshBasicMaterial color="#eaf0ff" fog={false} toneMapped={false} />
-        </mesh>
-        <mesh>
-          <sphereGeometry args={[11, 32, 32]} />
-          <meshBasicMaterial
-            color="#9fb4ff"
-            transparent
-            opacity={0.16}
-            fog={false}
-            toneMapped={false}
-            depthWrite={false}
-          />
+          <sphereGeometry args={[14, 32, 32]} />
+          <meshBasicMaterial color="#eef2ff" fog={false} toneMapped={false} />
         </mesh>
       </group>
 
@@ -56,7 +46,7 @@ export function Experience() {
       <ambientLight intensity={0.35} color="#aebfff" />
       <hemisphereLight args={['#2a3f72', '#05060d', 0.5]} />
       <directionalLight
-        position={[60, 95, -70]}
+        position={[110, 95, 110]}
         intensity={0.85}
         color="#cdd9ff"
         castShadow

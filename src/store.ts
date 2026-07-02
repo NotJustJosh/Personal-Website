@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { IslandId } from './content'
+import { spawnIsland } from './lib/world'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Tiny global store (zustand).
@@ -54,7 +55,8 @@ interface GameState {
 }
 
 export const useGame = create<GameState>((set) => ({
-  openPanel: null,
+  // Open the hub (About) panel by default on load.
+  openPanel: spawnIsland().id,
   nearbyIsland: null,
   nearbyItem: null,
   focusItem: null,
