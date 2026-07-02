@@ -234,7 +234,7 @@ export const content: SiteContent = {
             tags: ['Facial Recognition', 'Machine Learning', 'Sensing Array', 'Motion Profiling'],
             links: [
               { label: 'Publication', url: 'https://example.com' },
-              { label: 'Article Published on Carnegie Mellon University Website', url: 'https://example.com' },
+              { label: 'Article Published on Carnegie Mellon University Website', url: 'https://www.cmu.edu/news/stories/archives/2024/July/hide-and-seek-governors-school' },
             ],
           },
         ],
