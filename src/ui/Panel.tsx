@@ -5,6 +5,7 @@ import { ContentLink } from './ContentLink'
 import { Gallery } from './Gallery'
 import { RichText } from './RichText'
 import { ContentGroups } from './ContentGroups'
+import { Slides } from './Slides'
 import { ProjectCard, chipStyle } from './ProjectCard'
 import { CATEGORY_META, tagCategory } from '../lib/tags'
 import type { TagCategory } from '../lib/tags'
@@ -32,6 +33,9 @@ export function Panel({
   const panelRef = useRef<HTMLDivElement>(null)
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  // Which slide the deck is on. The island's own heading ("About Me") is only
+  // shown on the first slide — after that each slide carries its own title.
+  const [slideIndex, setSlideIndex] = useState(0)
 
   // Scroll the focused entry into view when the panel opens / focus changes.
   useEffect(() => {
@@ -44,6 +48,7 @@ export function Panel({
   useEffect(() => {
     setActiveTag(null)
     setFilterOpen(false)
+    setSlideIndex(0)
   }, [data.title])
 
   const projects = data.projects ?? []
@@ -76,14 +81,22 @@ export function Panel({
           ×
         </button>
 
-        <h2 className="panel__title">{data.title}</h2>
+        {(!data.slides?.length || slideIndex === 0) && (
+          <h2 className="panel__title">{data.title}</h2>
+        )}
 
-        {data.body?.map((paragraph, i) => (
-          <RichText key={i} text={paragraph} className="panel__body" />
-        ))}
-
-        {/* Island-level gallery (photos not tied to a single project) */}
-        <Gallery images={data.images} label={data.title} />
+        {/* A slideshow REPLACES the body text + island gallery when present. */}
+        {data.slides?.length ? (
+          <Slides slides={data.slides} view="3d" onDone={onClose} onIndexChange={setSlideIndex} />
+        ) : (
+          <>
+            {data.body?.map((paragraph, i) => (
+              <RichText key={i} text={paragraph} className="panel__body" />
+            ))}
+            {/* Island-level gallery (photos not tied to a single project) */}
+            <Gallery images={data.images} label={data.title} />
+          </>
+        )}
 
         {/* Nested sub-sections (e.g. Resume / Transcript on the Resume island) */}
         <ContentGroups groups={data.groups} />

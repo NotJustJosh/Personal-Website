@@ -233,6 +233,7 @@ kbd {
 .panel {
   position: relative;
   width: min(640px, 100%);
+  container-type: inline-size;
   max-height: 85vh;
   overflow-y: auto;
   padding: 28px 28px 32px;
@@ -408,6 +409,142 @@ kbd {
 .project__links a {
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+/* ───────────────────────────── Slideshow (island intro deck) ───────────────────────────── */
+.slides {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 6px 0 4px;
+}
+/* Fixed min-height so the panel doesn't jump size between slides. */
+.slide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 300px;
+  animation: slide-in 0.22s ease;
+}
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+.slide__image {
+  display: block;
+  /* Natural aspect, centred — never cropped. A tall portrait just gets narrower
+     rather than having its head and feet sliced off. */
+  width: auto;
+  max-width: 100%;
+  max-height: 300px;
+  margin: 2px auto 0;
+  object-fit: contain;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+}
+.slide--hero .slide__image {
+  max-height: 360px;
+}
+.slide__title {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+/* Opening slide: the name goes big and spans the full panel width. */
+.slide__title--hero {
+  width: 100%;
+  font-size: clamp(2rem, 1.1rem + 2.8vw, 3.1rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.slide__subtitle {
+  margin: 0;
+  color: var(--accent, #8ecae6);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.slide--hero .slide__subtitle {
+  font-size: 1.05rem;
+  text-wrap: balance;
+}
+.slide__body {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.slide__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+/* Controls tutorial rows: key caps on the left, what they do on the right. */
+.slide__keys {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0;
+}
+.slide__keyrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slide__keycaps {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 132px;
+}
+.slide__keylabel {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Back / dots / Next */
+.slides__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+.slides__nav .btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+.slides__nav .btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.slides__dots {
+  display: flex;
+  gap: 8px;
+}
+.slides__dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.22);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.slides__dot:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+.slides__dot.is-active {
+  background: var(--accent, #5b8cff);
+  transform: scale(1.35);
 }
 
 /* ───────────────────────────── Toast (copy confirmation) ───────────────────────────── */
@@ -854,5 +991,23 @@ kbd {
   }
   .lightbox__nav--next {
     right: 6px;
+  }
+  .slide {
+    min-height: 260px;
+  }
+  .slide__image {
+    max-height: 240px;
+  }
+  .slide--hero .slide__image {
+    max-height: 260px;
+  }
+  .slide__keyrow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .slides__nav .btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 }

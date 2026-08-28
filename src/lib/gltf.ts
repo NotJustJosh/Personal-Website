@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GLTF + Draco loader, ready for you to drop in .glb models.
@@ -43,16 +44,33 @@ export function preloadModel(url: string) {
  * world-space bounding-box `size` so callers can scale it to fit. Computed once
  * per (path, anchor) and shared across instances (useGLTF caches the scene).
  */
-export function useBakedGeometry(path: string, anchor: 'base' | 'top') {
+export function useBakedGeometry(path: string, anchor: 'base' | 'top', rotateY = 0) {
   const { scene } = useGLTF(modelUrl(path))
   return useMemo(() => {
     scene.updateMatrixWorld(true)
-    let mesh: THREE.Mesh | undefined
+
+    // Merge EVERY mesh in the file, not just the first one — pillar.glb is four
+    // separate meshes, and taking only the first rendered a quarter of it.
+    // Attributes are trimmed to the common set so the merge can't fail on a
+    // model that carries extras (tangents, vertex colors) on some parts only.
+    const parts: THREE.BufferGeometry[] = []
     scene.traverse((o) => {
-      if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      const g = m.geometry.clone()
+      g.applyMatrix4(m.matrixWorld)
+      for (const name of Object.keys(g.attributes)) {
+        if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name)
+      }
+      if (!g.attributes.normal) g.computeVertexNormals()
+      if (!g.attributes.uv) {
+        g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2))
+      }
+      parts.push(g.index ? g.toNonIndexed() : g)
     })
-    const geometry = mesh!.geometry.clone()
-    geometry.applyMatrix4(mesh!.matrixWorld)
+    const geometry = parts.length === 1 ? parts[0] : mergeGeometries(parts, false)!
+
+    if (rotateY) geometry.rotateY((rotateY * Math.PI) / 180)
     geometry.computeBoundingBox()
     const bb = geometry.boundingBox!
     const cx = (bb.min.x + bb.max.x) / 2
@@ -63,5 +81,5 @@ export function useBakedGeometry(path: string, anchor: 'base' | 'top') {
     const size = new THREE.Vector3()
     geometry.boundingBox!.getSize(size)
     return { geometry, size }
-  }, [scene, anchor])
+  }, [scene, anchor, rotateY])
 }

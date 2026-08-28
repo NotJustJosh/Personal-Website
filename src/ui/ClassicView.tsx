@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { content } from '../content'
 import { asset } from '../lib/paths'
-import { islandPanel } from '../lib/world'
+import { CONTENT_ISLANDS, islandPanel } from '../lib/world'
 import type { PanelContent } from '../content'
 import { Gallery } from './Gallery'
 import { RichText } from './RichText'
 import { ContentGroups } from './ContentGroups'
+import { Slides } from './Slides'
 import { ContentLink } from './ContentLink'
 import { ProjectCard, chipStyle } from './ProjectCard'
 import { CATEGORY_META, tagCategory } from '../lib/tags'
@@ -39,12 +40,18 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
     <section className="classic__section" id={`section-${id}`}>
       <h2>{data.title}</h2>
 
-      {data.body?.map((paragraph, i) => (
-        <RichText key={i} text={paragraph} />
-      ))}
-
-      {/* Island-level gallery (photos not tied to a single project) */}
-      <Gallery images={data.images} label={data.title} />
+      {/* A slideshow REPLACES the body text + island gallery when present. */}
+      {data.slides?.length ? (
+        <Slides slides={data.slides} view="classic" />
+      ) : (
+        <>
+          {data.body?.map((paragraph, i) => (
+            <RichText key={i} text={paragraph} />
+          ))}
+          {/* Island-level gallery (photos not tied to a single project) */}
+          <Gallery images={data.images} label={data.title} />
+        </>
+      )}
 
       {/* Nested sub-sections (e.g. Resume / Transcript on the Resume island) */}
       <ContentGroups groups={data.groups} />
@@ -141,7 +148,7 @@ export function ClassicView({
           <strong>{content.name}</strong>
         </a>
         <nav className="classic__navlinks">
-          {content.islands.map((island) => (
+          {CONTENT_ISLANDS.map((island) => (
             <a key={island.id} href={`#section-${island.id}`}>
               {island.label}
             </a>
@@ -170,7 +177,7 @@ export function ClassicView({
           <p className="classic__tagline">{content.tagline}</p>
         </section>
 
-        {content.islands.map((island) => (
+        {CONTENT_ISLANDS.map((island) => (
           <Section key={island.id} id={island.id} data={islandPanel(island)} />
         ))}
       </main>

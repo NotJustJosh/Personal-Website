@@ -29,6 +29,72 @@ export const ISLAND = {
   THICKNESS: 1.6,
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  VISUALS — every look-and-feel knob lives here. Colour comes from glowing
+//  accents against a dark base, so the night mood survives: raise EMISSIVE or
+//  BLOOM.intensity to make things glow MORE, don't raise the light intensities.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One accent per section. Drives its marker glow, pad, light and bridges. */
+export const ZONE_ACCENTS: Record<string, string> = {
+  about: '#FF7A59', // coral
+  projects: '#E0479E', // magenta
+  experience: '#38BDF8', // cyan
+  honors: '#FBBF24', // gold
+  contact: '#34D399', // mint
+  resources: '#A78BFA', // violet
+  showcase: '#F2C14E', // the platform the three work sections stand on
+}
+
+export const VISUALS = {
+  /** ACES filmic tone mapping exposure. ~1 keeps highlights from clipping. */
+  EXPOSURE: 1.0,
+
+  /** Only things BRIGHTER than the threshold bloom — keeps the dark base dark. */
+  BLOOM: {
+    intensity: 0.8,
+    radius: 0.4,
+    luminanceThreshold: 0.85,
+    luminanceSmoothing: 0.12,
+  },
+
+  /** Emissive strengths. These are what actually glow through the bloom pass. */
+  EMISSIVE: {
+    /** The spinning cube on each pedestal. */
+    marker: 3.2,
+    /** The orbiting project icons: resting, and when you're next to one. */
+    itemIdle: 1.6,
+    itemSelected: 3.4,
+  },
+
+  /** Key/fill/bounce. Cool key + warm fill gives geometry a colour axis. */
+  LIGHTS: {
+    keyColor: '#7C6DF2', // cool blue-violet
+    keyIntensity: 1.0,
+    fillColor: '#FF8A5C', // warm coral, opposite side, no shadows
+    fillIntensity: 0.5,
+    hemiSky: '#3A4A7A',
+    hemiGround: '#0A0E1A',
+    hemiIntensity: 0.3,
+    /** Kept very low on purpose — flat ambient is what washed the scene out. */
+    ambientIntensity: 0.1,
+  },
+
+  /** Drifting aurora curtains behind the islands. */
+  AURORA: {
+    /** Colours low → mid → high up the curtain. */
+    low: '#2EFFA0', // green
+    mid: '#38BDF8', // cyan
+    high: '#A78BFA', // violet
+    /** Overall brightness; this is what bloom picks up. */
+    intensity: 1.5,
+    /** Vertical scroll speed of the noise. */
+    speed: 0.035,
+    /** How many curtains, each further back and slower (parallax). */
+    layers: 3,
+  },
+}
+
 export const ORBIT = {
   /** Icon ring radius as a fraction of the island radius. */
   RADIUS_FACTOR: 0.78,

@@ -91,6 +91,38 @@ Rules:
 - Link URLs: a full `https://…`, a bare email (auto-`mailto:`), or a file in `/public`
   (e.g. `resume.pdf`) — local files get the GitHub Pages base path automatically.
 
+### Slideshows (the intro deck)
+
+Give an island `slides` and its panel becomes a click-through deck instead of a wall of
+text — that's what the hub (`about`) island uses now:
+
+```ts
+content: {
+  title: 'About',
+  slides: [
+    { title: "Hi, I'm Josh", subtitle: 'EE + Physics', image: 'images/portrait.jpg' },
+    { title: 'What I study', body: ['Short. Two sentences, tops.'] },
+    { title: 'Getting around', only: '3d',
+      keys: [{ keys: ['W','A','S','D'], label: 'Walk' }, { keys: ['Space'], label: 'Jump' }] },
+  ],
+}
+```
+
+- Navigate with the on-screen **Back / Next**, the dots, or the **← / →** keys.
+- Title and subtitle render **above** the image; `hero: true` makes the title
+  extra-large and full-width — use it on the opening slide.
+- `image` is ONE picture shown at its natural aspect, centred and never cropped
+  (a tall portrait just gets narrower rather than losing its head).
+- `keys` draws key caps — use it for the controls tutorial.
+- `only: '3d'` hides a slide in Classic view (`only: 'classic'` does the reverse). The
+  walk-around tutorial is marked `'3d'`, so 2D visitors never see it.
+- Slides **replace** the island's `body` + `images`; `groups`, `projects` and `links`
+  still render underneath.
+- The last slide's button closes the panel and drops you into the world.
+- In the 3D panel the island's own heading only shows on slide 1 — after that
+  each slide carries its own title. Classic view keeps its `<h2>` on every
+  section, since the nav links anchor to it.
+
 ### Copy-to-clipboard links
 
 Add `copy: true` to a link and clicking it copies the value (minus any `mailto:` /
@@ -249,6 +281,7 @@ src/
     Gallery.tsx         ← image thumbnails + the full-size lightbox
     ContentGroups.tsx   ← nested sub-sections (`groups`) inside an island
     RichText.tsx        ← "- " bullets / blank-line paragraphs in prose
+    Slides.tsx          ← the click-through slide deck (`slides`)
     ContentLink.tsx     ← a link, or a copy-to-clipboard button (`copy: true`)
     Toast.tsx           ← transient "Copied …" notification
   lib/

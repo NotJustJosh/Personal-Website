@@ -1,8 +1,9 @@
 import { Suspense } from 'react'
 import { Text, Billboard, useGLTF } from '@react-three/drei'
-import { RigidBody, CylinderCollider } from '@react-three/rapier'
+import { RigidBody } from '@react-three/rapier'
 import type { Island as IslandData } from '../content'
 import { islandRadius, islandHasOrbit } from '../lib/world'
+import { ISLAND } from '../config'
 import { useModel, modelUrl, useBakedGeometry } from '../lib/gltf'
 import { OrbitingItems } from './OrbitingItems'
 import { Waypoint } from './Waypoint'
@@ -15,8 +16,8 @@ import { Waypoint } from './Waypoint'
 //   • a pedestal + glowing cube centerpiece, a floating label, and (if it has
 //     items) the orbiting icons + tag-puffs.
 
-const COLLIDER_DEPTH = 4 // physics collider depth (deeper than the model; anti-tunnel)
 const ISLAND_COLOR = '#867c64' // natural earthy tone (the accent light tints it)
+const DEFAULT_GROUND_MODEL = 'models/island.glb'
 
 // Optional extra .glb set dressing. Only mounted when `model` is set in content.ts.
 function ModelDressing({ url }: { url: string }) {
@@ -24,10 +25,10 @@ function ModelDressing({ url }: { url: string }) {
   return <primitive object={scene} />
 }
 
-// The island.glb body, scaled so its horizontal radius matches `radius` and its
-// top sits at the surface (local y = 0).
-function IslandModel({ radius }: { radius: number }) {
-  const { geometry, size } = useBakedGeometry('models/island.glb', 'top')
+// The island body, scaled so its horizontal radius matches `radius` and its top
+// sits at the surface (local y = 0).
+function IslandModel({ radius, url, rotateY }: { radius: number; url: string; rotateY: number }) {
+  const { geometry, size } = useBakedGeometry(url, 'top', rotateY)
   const scale = radius / Math.max(size.x / 2, 1e-3)
   return (
     <mesh geometry={geometry} scale={scale} castShadow receiveShadow>
@@ -42,18 +43,31 @@ export function Island({ island }: { island: IslandData }) {
 
   return (
     <group position={[x, y, z]}>
-      {/* Physics + visual body */}
-      <RigidBody type="fixed" colliders={false} friction={1}>
-        {/* Deep cylinder collider; its top is at the surface (local y = 0). */}
-        <CylinderCollider args={[COLLIDER_DEPTH / 2, radius]} position={[0, -COLLIDER_DEPTH / 2, 0]} />
-        <IslandModel radius={radius} />
-      </RigidBody>
+      {/* Physics + visual body. Islands standing ON a platform skip this — the
+          platform underneath provides the ground and the collider. */}
+      {!island.onPlatform && (
+        // `colliders="hull"` builds the collider from the SCALED mesh itself.
+        // A cylinder of `radius` used to under-cover it: island.glb's top face is
+        // a polygon whose corners reach 1.126× its bbox half-width, so the last
+        // ~12% of visible ground at each corner had nothing underneath — walk out
+        // there and you dropped straight through. That gap scaled with the island,
+        // so it was ~0.9 units on a small island and ~2.5 on the big platform.
+        <RigidBody type="fixed" colliders="hull" friction={1}>
+          <IslandModel
+            radius={radius}
+            url={island.groundModel ?? DEFAULT_GROUND_MODEL}
+            rotateY={island.groundRotation ?? 0}
+          />
+        </RigidBody>
+      )}
 
-      {/* Accent light washing the island in its color */}
+      {/* Accent light washing the island in its color. Bigger disks need the
+          lamp higher and brighter or their rim falls into the dark — inverse
+          square means a 20-unit platform can't use a 7-unit island's settings. */}
       <pointLight
-        position={[0, 4, 0]}
+        position={[0, Math.max(4, radius * 0.5), 0]}
         color={island.accentColor}
-        intensity={11}
+        intensity={11 * Math.max(1, radius / ISLAND.RADIUS)}
         distance={radius * 4}
         decay={2}
       />
@@ -65,13 +79,15 @@ export function Island({ island }: { island: IslandData }) {
         </Suspense>
       )}
 
-      {/* Centerpiece: pedestal + glowing spinning/bobbing cube */}
-      <Waypoint accentColor={island.accentColor} />
+      {/* Centerpiece: pedestal + glowing spinning/bobbing cube. A platform is
+          scenery, so it gets no pedestal — the sections standing on it do. */}
+      {!island.platform && <Waypoint accentColor={island.accentColor} />}
 
-      {/* Floating label, always facing the camera */}
-      <Billboard position={[0, 3.8, 0]}>
+      {/* Floating label, always facing the camera. A platform's name sits higher
+          and larger, so it reads as a district sign above the pedestal labels. */}
+      <Billboard position={[0, island.platform ? 9.5 : 3.8, 0]}>
         <Text
-          fontSize={0.9}
+          fontSize={island.platform ? 1.2 : 0.9}
           color="#eef2ff"
           anchorX="center"
           anchorY="middle"

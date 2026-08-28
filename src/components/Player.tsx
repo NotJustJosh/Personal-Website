@@ -218,6 +218,7 @@ export function Player({ targetRef }: PlayerProps) {
     let nearby: IslandId | null = null
     let best = Infinity
     for (const island of content.islands) {
+      if (island.platform) continue // scenery — it has no panel to open
       const dx = t.x - island.position[0]
       const dz = t.z - island.position[2]
       const dist = Math.hypot(dx, dz)

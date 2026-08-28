@@ -28,6 +28,19 @@
 //      // model: 'models/blog.glb',         // optional .glb in /public (Draco ok)
 //    }
 //
+//  ─── PUTTING SEVERAL SECTIONS ON ONE LANDMASS ──────────────────────────────
+//  Set `platform: true` on a big island to make it pure scenery (ground only —
+//  no pedestal, no panel, hidden from the menus). Then give the sections that
+//  live on it `onPlatform: true` plus the platform's `y`, and they'll render
+//  their pedestal + label + panel with no ground of their own.
+//
+//    { id: 'showcase', label: 'My Work', platform: true, size: 20,
+//      position: [0, 3, 42], neighbors: ['about'] },
+//    { id: 'projects', onPlatform: true, size: 5, position: [-11, 3, 38], … },
+//
+//  Keep the pedestals far enough apart that their interaction zones
+//  (`size` + 1) don't overlap, or walking between them gets ambiguous.
+//
 //  Rules:
 //    • Exactly ONE island should have `isHub: true` — that's the spawn point.
 //    • `neighbors` is bidirectional & de-duplicated, so list a bridge on either
@@ -56,6 +69,27 @@
 //
 //  (A project's `name`/`title` is different — there EVERY newline breaks, which
 //  is what the multi-line Honors entries below rely on.)
+//
+//  ─── SLIDESHOWS (the intro deck) ───────────────────────────────────────────
+//  Give an island `slides` and its panel becomes a click-through deck instead
+//  of a wall of text. Each slide can carry a title, a subtitle, a little body,
+//  ONE big image, key-cap rows (for a controls tutorial) and buttons:
+//
+//    slides: [
+//      { hero: true, title: 'Josh Yuen', subtitle: 'EE + Physics',
+//        image: 'images/me.jpg' },
+//      { title: 'What I do', body: ['- Optics', '- Embedded systems'] },
+//      { title: 'Moving around', only: '3d',
+//        keys: [{ keys: ['W', 'A', 'S', 'D'], label: 'Walk' }] },
+//    ]
+//
+//  Title and subtitle always render ABOVE the image. `hero: true` makes the
+//  title extra-large + full-width — use it on the opening slide.
+//  Navigate with the on-screen arrows, the dots, or the ← / → keys.
+//  `only: '3d'` hides a slide in Classic view (and `only: 'classic'` vice
+//  versa) — use it for the walk-around tutorial, which means nothing in 2D.
+//  Slides REPLACE the island's `body` + `images`; `groups`, `projects` and
+//  `links` still render underneath.
 //
 //  ─── NESTING CONTENT IN A SECTION ──────────────────────────────────────────
 //  Use `groups` when one island holds several distinct things (see Resume
@@ -91,6 +125,8 @@
 //  Keep previews small (~800px wide, compressed) — every cover image is fetched
 //  the first time you set foot on that island.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { ZONE_ACCENTS } from './config'
 
 export type IslandId = string
 
@@ -158,6 +194,52 @@ export interface Project {
   icon?: string
 }
 
+/** One row of a controls tutorial: some key caps and what they do. */
+export interface KeyHint {
+  /** Key caps, drawn left to right — e.g. ['W', 'A', 'S', 'D'] or ['Esc']. */
+  keys: string[]
+  /** What those keys do, shown next to them. */
+  label: string
+}
+
+/**
+ * One card in an island's slideshow. Give an island `slides` and its panel
+ * becomes a click-through deck instead of a wall of text — an intro, a tour,
+ * a tutorial. Keep each slide SHORT; that's the whole point.
+ *
+ *     slides: [
+ *       { title: 'Josh Yuen', subtitle: 'EE + Physics', image: 'images/me.jpg' },
+ *       { title: 'What I do', body: ['- Optics', '- Embedded'] },
+ *       { title: 'Moving around',
+ *         keys: [{ keys: ['W','A','S','D'], label: 'Move' }] },
+ *     ]
+ */
+export interface Slide {
+  /** Big heading. */
+  title?: string
+  /** Smaller line under the title — a tagline, a date, a one-liner. */
+  subtitle?: string
+  /** Paragraphs. Supports "- " bullets, same as everywhere else. */
+  body?: string[]
+  /** ONE image, shown large (not a thumbnail), UNDER the title/subtitle. */
+  image?: Media
+  /**
+   * Hero treatment: renders the title extra-large and full-width. Use it on the
+   * opening slide of a deck.
+   */
+  hero?: boolean
+  /** Key-cap rows — use these for the movement/controls tutorial slides. */
+  keys?: KeyHint[]
+  /** Buttons at the bottom of the slide. */
+  links?: LinkItem[]
+  /**
+   * Limit this slide to one view. Tutorial slides about walking around only
+   * make sense in the 3D world, so mark those `only: '3d'`.
+   * Omit to show the slide in both views.
+   */
+  only?: '3d' | 'classic'
+}
+
 /**
  * A nested sub-section inside an island — its own heading, prose, gallery and
  * buttons. Use it when one island holds several distinct things: a Resume
@@ -190,6 +272,8 @@ export interface PanelContent {
   body?: string[]
   /** Island-level gallery, shown under the body text (before the project cards). */
   images?: Media[]
+  /** A click-through slideshow. When present it REPLACES `body` + `images`. */
+  slides?: Slide[]
   /** Nested sub-sections, each with its own heading/prose/gallery/buttons. */
   groups?: ContentGroup[]
   projects?: Project[]
@@ -202,6 +286,8 @@ export interface IslandContent {
   body?: string[]
   /** Island-level gallery, shown under the body text (before the project cards). */
   images?: Media[]
+  /** A click-through slideshow. When present it REPLACES `body` + `images`. */
+  slides?: Slide[]
   /** Nested sub-sections, each with its own heading/prose/gallery/buttons. */
   groups?: ContentGroup[]
   projects?: Project[]
@@ -221,6 +307,22 @@ export interface Island {
   size?: number
   /** Set on exactly one island — the spawn point. */
   isHub?: boolean
+  /**
+   * Scenery that HOLDS other islands. It renders ground, a collider and its
+   * accent light, but no pedestal and no panel, and it's kept out of the
+   * fast-travel menu and the Classic view. Use it to put several sections on
+   * one landmass — see the "Showcase" island below.
+   */
+  platform?: boolean
+  /**
+   * This island SITS ON a platform: no ground or collider of its own (the
+   * platform provides both), but it keeps its pedestal, label, orbiting items,
+   * panel, fast-travel entry and Classic-view section.
+   *
+   * Give it the SAME `y` as its platform, and a `size` small enough that the
+   * interaction zones of the pedestals sharing the platform don't overlap.
+   */
+  onPlatform?: boolean
   /** Ids this island connects to via light-bridges (bidirectional). */
   neighbors: IslandId[]
   /** When true, the island's items orbit it as clickable icons. */
@@ -229,6 +331,18 @@ export interface Island {
   content: IslandContent
   /** Optional .glb under /public for set dressing (Draco supported). */
   model?: string
+  /**
+   * Ground mesh for this island. Defaults to 'models/island.glb'. The physics
+   * collider is built from whatever you put here, so a differently-shaped
+   * landmass just works — it's scaled so its X extent matches `size` × 2.
+   */
+  groundModel?: string
+  /**
+   * Spin the ground mesh this many degrees about Y. Baked into the geometry, so
+   * the physics hull turns with it. Handy for pointing an irregular landmass a
+   * particular way without touching the model.
+   */
+  groundRotation?: number
 }
 
 export interface SiteContent {
@@ -258,41 +372,102 @@ export const content: SiteContent = {
       id: 'about',
       label: 'About',
       position: [0, 0, 0],
-      accentColor: '#8ecae6',
+      accentColor: ZONE_ACCENTS.about,
       size: 9,
       isHub: true,
-      neighbors: ['projects', 'experience', 'contact', 'resources'],
+      neighbors: ['showcase'],
       content: {
-        title: 'About',
-        body: [
-          `Hello! I'm Josh Yuen, a sophomore majoring in physics and electrical
-          engineering at Northeastern University. With 108 credit-hours under my belt
-          and a 3.973 GPA, I'm applying for NEU's combined BS-MS program in the
-          fall so I can graduate with a Masters degree in electrical engineering
-          concentrated in electromagnetics, plasma, and optics--wish me luck!`,
-          `My greatest strengths and greatest interest has always lain in the realm
-          of synthesis; the synthesis of knowledge, the synthesis of fields, and a strong
-          conviction that life--like field theory!--can and should be unified.
-          I've devoted myself to studying the interdisciplinarity of our technology-driven
-          society in a wide variety of topics including microelectromechanical
-          systems, optical character recognition/facial recognition, and wearable technology,
-          to name a few areas in particular.`,
-          `Feel free to take a look around my virtual world (all art and models were created myself using the Blender 3D creation software),
-          or fast-forward to my resume, contact info, or projects using the menu in the top-right corner!`,
+        title: 'About Me',
+        // ── The intro deck ───────────────────────────────────────────────────
+        // Click-through slides instead of a wall of text. Keep each one SHORT.
+        // Add `image: 'images/foo.jpg'` to any slide for a picture up top; add
+        // `only: '3d'` to hide a slide from the Classic 2D view.
+        slides: [
+          {
+            hero: true,
+            title: "Hi, I\'m Josh Yuen",
+            image: 'images/portrait.jpg',
+            subtitle: `Electrical Engineering and Physics Student · 
+            Photonic Systems & Optical Computing Researcher · 
+            Interdisciplinary Systems Advocate`,
+            body: [``],
+          },
+          {
+            title: 'Academics',
+            // image: 'images/neu-campus.jpg',
+            body: [
+              `I'm a sophomore majoring in physics and electrical engineering at Northeastern University. 
+              With 108 credit-hours under my belt and a 3.973 GPA, 
+              I'm applying for NEU's combined BS-MS program in the fall 
+              so I can graduate with a Masters degree in electrical engineering 
+              concentrated in electromagnetics, plasma, and optics--wish me luck!
+`,
+            ],
+          },
+          {
+            title: 'Personal Convictions',
+            // image: 'images/interferometer.jpg',
+            body: [
+              `My greatest strengths and greatest interest has always lain in the realm of synthesis; 
+              the synthesis of knowledge, the synthesis of fields, 
+              and a strong conviction that life--like field theory!--can and should be unified.`, 
+              `I've devoted myself to studying the interdisciplinarity of our technology-driven society 
+              in a wide variety of topics including microelectromechanical systems, 
+              optical character recognition/facial recognition, and wearable technology, 
+              to name a few areas in particular.`,
+            ],
+          },
+          {
+            title: 'Have a look around',
+            // image: 'images/world-overview.jpg',
+            body: [
+              `Feel free to take a look around my virtual world 
+              (all art and models were created myself using the Blender 3D creation software), 
+              or fast-forward to my resume, contact info, 
+              or projects using the menu in the top-right corner.`,
+            ],
+          },
+          {
+            title: 'Getting around',
+            only: '3d',
+            body: ['You control the little blue capsule.'],
+            keys: [
+              { keys: ['W', 'A', 'S', 'D'], label: 'Walk (arrow keys work too)' },
+              { keys: ['Space'], label: 'Jump' },
+            ],
+          },
         ],
-        // An island can have its own gallery too — photos that aren't tied to
-        // one project (lab shots, conference photos, press clippings…):
-        // images: ['images/lab-bench.jpg', 'images/vex-worlds.jpg'],
       },
+    },
+
+    // ── Showcase platform ────────────────────────────────────────────────────
+    // Pure scenery: one big landmass that carries the Projects, Experience and
+    // Honors pedestals (`platform: true` → no pedestal, no panel, hidden from
+    // the fast-travel menu and Classic view). The bridges to/from this whole
+    // area hang off THIS entry, not off the three sections standing on it.
+    {
+      id: 'showcase',
+      label: 'My Work',
+      position: [0, 3, 42],
+      accentColor: ZONE_ACCENTS.showcase,
+      size: 15,
+      platform: true,
+      groundModel: 'models/xscaledisland.glb',
+      groundRotation: 90,
+      neighbors: ['about', 'resources', 'contact'],
+      content: {},
     },
 
     // ── Projects ───────────────────────────────────────────────────────────────
     {
       id: 'projects',
       label: 'Projects',
-      position: [34, 3, 8],
-      accentColor: '#ffb703',
-      neighbors: ['experience'],
+      // On the Showcase platform (same y), left-hand pedestal as you arrive.
+      position: [8, 3, 39],
+      accentColor: ZONE_ACCENTS.projects,
+      size: 4.5,
+      onPlatform: true,
+      neighbors: [],
       orbit: true,
       content: {
         title: 'Projects and Publications',
@@ -389,8 +564,11 @@ export const content: SiteContent = {
     {
       id: 'experience',
       label: 'Experience',
-      position: [8, 2, 34],
-      accentColor: '#9d6bff',
+      // On the Showcase platform, back-centre pedestal.
+      position: [0, 3, 48],
+      accentColor: ZONE_ACCENTS.experience,
+      size: 4.5,
+      onPlatform: true,
       neighbors: [],
       orbit: true,
       content: {
@@ -441,9 +619,10 @@ export const content: SiteContent = {
     {
       id: 'contact',
       label: 'Contact',
-      position: [-32, 4, 12],
-      accentColor: '#90be6d',
-      neighbors: ['resources', 'experience'],
+      // Behind the Showcase platform, off to the right.
+      position: [26, 5, 68],
+      accentColor: ZONE_ACCENTS.contact,
+      neighbors: [],
       content: {
         title: 'Contact',
         body: ['Want to get in touch? Pick whichever works for you.'],
@@ -459,8 +638,9 @@ export const content: SiteContent = {
     {
       id: 'resources',
       label: 'Resources',
-      position: [-12, 1, -32],
-      accentColor: '#ef476f',
+      // Behind the Showcase platform, off to the left.
+      position: [-26, 5, 68],
+      accentColor: ZONE_ACCENTS.resources,
       neighbors: [],
       content: {
         title: 'Resources',
@@ -485,9 +665,12 @@ export const content: SiteContent = {
     {
       id: 'honors',
       label: 'Honors',
-      position: [32, 2, -12],
-      accentColor: '#06d6a0',
-      neighbors: ['resources', 'projects', 'about'],
+      // On the Showcase platform, right-hand pedestal as you arrive.
+      position: [-8, 3, 39],
+      accentColor: ZONE_ACCENTS.honors,
+      size: 4.5,
+      onPlatform: true,
+      neighbors: [],
       // Honors is a compact list: names + dates only (no descriptions, no body).
       content: {
         title: 'Honors',

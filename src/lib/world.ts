@@ -9,6 +9,12 @@ import type { ResolvedImage } from './media'
 
 export const ISLANDS = content.islands
 
+/**
+ * Islands with their own section/panel — i.e. everything except scenery
+ * platforms. This is what the fast-travel menu and Classic view list.
+ */
+export const CONTENT_ISLANDS = ISLANDS.filter((i) => !i.platform)
+
 /** The radius of an island (its `size`, or the default). */
 export function islandRadius(island: Island): number {
   return island.size ?? ISLAND.RADIUS
@@ -78,6 +84,7 @@ export function islandPanel(island: Island): PanelContent {
     title: island.content.title ?? island.label,
     body: island.content.body,
     images: island.content.images,
+    slides: island.content.slides,
     groups: island.content.groups,
     projects: island.content.projects,
     links: island.content.links,

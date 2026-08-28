@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { content } from '../content'
+import { CONTENT_ISLANDS } from '../lib/world'
 import { useGame } from '../store'
 
 // A dropdown listing every island (generated from content.ts) that teleports the
@@ -19,7 +19,7 @@ export function FastTravelMenu() {
       </button>
       {open && (
         <ul className="fasttravel__list">
-          {content.islands.map((island) => (
+          {CONTENT_ISLANDS.map((island) => (
             <li key={island.id}>
               <button
                 className="fasttravel__item"

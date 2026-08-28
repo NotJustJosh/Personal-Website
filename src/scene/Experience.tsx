@@ -1,6 +1,8 @@
 import { Suspense, useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { Stars } from '@react-three/drei'
+import { EffectComposer, Bloom, ToneMapping } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
 import { Physics } from '@react-three/rapier'
 import { Player } from '../components/Player'
 import { CameraRig } from '../components/CameraRig'
@@ -9,10 +11,11 @@ import { RopeBridge } from '../components/RopeBridge'
 import { WorldBorder } from '../components/WorldBorder'
 import { SkyDome } from '../components/SkyDome'
 import { CloudLayer } from '../components/CloudLayer'
+import { Aurora } from '../components/Aurora'
 import { content } from '../content'
 import { getBridges } from '../lib/world'
 import { useGame } from '../store'
-import { WORLD } from '../config'
+import { WORLD, VISUALS } from '../config'
 
 // Bridges are derived once from the islands' `neighbors` lists.
 const bridges = getBridges()
@@ -30,6 +33,7 @@ function SceneReady() {
 export function Experience() {
   // Shared position written by the Player and read by the camera.
   const playerPos = useRef(new THREE.Vector3(0, 1, 0))
+  const quality = useGame((s) => s.quality)
 
   return (
     <>
@@ -42,15 +46,28 @@ export function Experience() {
         </mesh>
       </group>
 
-      {/* Moonlit lighting (cool + dim; islands' own accent lights do the rest) */}
-      <ambientLight intensity={0.35} color="#aebfff" />
-      <hemisphereLight args={['#2a3f72', '#05060d', 0.5]} />
+      {/* Key/fill/bounce. A COOL key on one side and a WARM fill on the other
+          give geometry a colour axis; flat ambient is kept very low on purpose,
+          since that's what washed the scene out before. All values in VISUALS. */}
+      <ambientLight intensity={VISUALS.LIGHTS.ambientIntensity} color="#aebfff" />
+      <hemisphereLight
+        args={[VISUALS.LIGHTS.hemiSky, VISUALS.LIGHTS.hemiGround, VISUALS.LIGHTS.hemiIntensity]}
+      />
+      {/* Warm fill, opposite side, no shadows — pure shaping light. */}
+      <directionalLight
+        position={[-90, 55, -70]}
+        intensity={VISUALS.LIGHTS.fillIntensity}
+        color={VISUALS.LIGHTS.fillColor}
+      />
+      {/* Cool key. Shadow map is 1024² (not 2048²) — a quarter of the shadow-pass
+          fill cost. The shadow camera spans 120×120, so each texel still covers
+          ~0.12 world units and the edges stay clean. */}
       <directionalLight
         position={[110, 95, 110]}
-        intensity={0.85}
-        color="#cdd9ff"
+        intensity={VISUALS.LIGHTS.keyIntensity}
+        color={VISUALS.LIGHTS.keyColor}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-60}
         shadow-camera-right={60}
         shadow-camera-top={60}
@@ -70,6 +87,9 @@ export function Experience() {
         <Stars radius={220} depth={60} count={6000} factor={5} saturation={0} fade speed={0.4} />
         {/* Cloud sea far below the islands for a sense of depth */}
         <CloudLayer />
+        {/* Drifting aurora curtains — the main source of colour in the sky.
+            Skipped entirely on low quality (they're fill-rate heavy). */}
+        {quality === 'high' && <Aurora />}
 
         {/* Physics world: islands + bridges are the only colliders; void is empty. */}
         <Physics gravity={[0, WORLD.GRAVITY, 0]}>
@@ -86,6 +106,23 @@ export function Experience() {
         </Physics>
         <SceneReady />
       </Suspense>
+
+      {/* Post-processing. Only things brighter than the luminance threshold
+          bloom, so the dark base stays dark and just the emissive markers, pads
+          and aurora glow. The composer also owns tone mapping (see
+          QualityManager in World.tsx). Dropped entirely on low quality. */}
+      {quality === 'high' && (
+        <EffectComposer multisampling={0}>
+          <Bloom
+            mipmapBlur
+            intensity={VISUALS.BLOOM.intensity}
+            radius={VISUALS.BLOOM.radius}
+            luminanceThreshold={VISUALS.BLOOM.luminanceThreshold}
+            luminanceSmoothing={VISUALS.BLOOM.luminanceSmoothing}
+          />
+          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+        </EffectComposer>
+      )}
     </>
   )
 }

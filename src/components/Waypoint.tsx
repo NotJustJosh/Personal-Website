@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { modelUrl } from '../lib/gltf'
+import { VISUALS } from '../config'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Island centerpiece: a marble base plate, a stone pedestal standing on it, and
@@ -11,6 +12,11 @@ import { modelUrl } from '../lib/gltf'
 //  Models live in public/models/: base_plate_8.glb + pedestal.glb (no materials;
 //  we author them in code). The plate is auto-scaled to a fixed footprint and the
 //  pedestal is measured + stacked on top of it, so swapping either model just works.
+//
+//  PERF: the cube used to carry its own pointLight. three.js forward-renders every
+//  light against every lit fragment — with one per island that was 6 extra lights
+//  for a glow the emissive material already provides. The island's own accent
+//  light (Island.tsx) still washes the pedestal.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PEDESTAL_MODEL = 'models/pedestal.glb'
@@ -103,15 +109,12 @@ function Centerpiece({ accentColor }: { accentColor: string }) {
           <meshStandardMaterial
             color={accentColor}
             emissive={accentColor}
-            emissiveIntensity={2.2}
+            emissiveIntensity={VISUALS.EMISSIVE.marker}
             toneMapped={false}
             roughness={0.3}
           />
         </mesh>
       </group>
-
-      {/* Glow cast by the cube */}
-      <pointLight position={[0, cubeBaseY, 0]} color={accentColor} intensity={4} distance={6} decay={2} />
     </group>
   )
 }

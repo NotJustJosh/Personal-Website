@@ -12,6 +12,21 @@ import { spawnIsland } from './lib/world'
 //  state across that boundary without prop-drilling through the Canvas.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Rendering quality. 'low' drops bloom, the aurora and render resolution. */
+export type Quality = 'high' | 'low'
+
+const QUALITY_KEY = 'portfolio:quality'
+
+function initialQuality(): Quality {
+  try {
+    const saved = localStorage.getItem(QUALITY_KEY)
+    if (saved === 'low' || saved === 'high') return saved
+  } catch {
+    /* private mode / storage disabled — fall through to the default */
+  }
+  return 'high'
+}
+
 /** Points at one interactable item (a project/link) on an island. */
 export interface ItemRef {
   islandId: IslandId
@@ -43,6 +58,10 @@ interface GameState {
   /** Screen fade for respawn / teleport polish. */
   fading: boolean
 
+  /** Rendering quality, persisted across visits. */
+  quality: Quality
+  toggleQuality: () => void
+
   /** Open an island's panel, optionally focused on one of its items. */
   openSection: (id: IslandId, focusIndex?: number) => void
   closePanel: () => void
@@ -64,6 +83,18 @@ export const useGame = create<GameState>((set) => ({
   teleportTarget: null,
   teleportNonce: 0,
   fading: false,
+  quality: initialQuality(),
+
+  toggleQuality: () =>
+    set((s) => {
+      const quality: Quality = s.quality === 'high' ? 'low' : 'high'
+      try {
+        localStorage.setItem(QUALITY_KEY, quality)
+      } catch {
+        /* not fatal — the choice just won't survive a reload */
+      }
+      return { quality }
+    }),
 
   openSection: (id, focusIndex) =>
     set({

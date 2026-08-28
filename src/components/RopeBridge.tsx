@@ -36,6 +36,10 @@ const COLLIDER_SEGMENTS = 10 // chain length approximating the sag
 const COLLIDER_HALF_THICK = 0.4 // half-thickness of each deck collider (anti-tunnel)
 const WALL_HALF_H = 0.6 // side-wall half height (keeps you on the bridge)
 const WALL_HALF_THICK = 0.06
+// Stone pillars flanking each end of the bridge (models/pillar.glb).
+const PILLAR_HEIGHT = 4.5 // ~2.5x the 1.8-unit player: reads as a gateway
+const PILLAR_CLEAR = 1.25 // pushed this far OUTSIDE the handrail, clear of the posts
+const PILLAR_SINK = 0.25 // sunk slightly into the ground so it never floats
 const RAIL_RADIUS = 0.06
 const ROPE_RADIUS = 0.045
 
@@ -106,6 +110,7 @@ function mergeGeoms(geoms: THREE.BufferGeometry[]): THREE.BufferGeometry {
 export function RopeBridge({ a, b }: { a: Island; b: Island }) {
   const post = useBakedGeometry('models/post.glb', 'base')
   const plank = useBakedGeometry('models/plank.glb', 'top')
+  const pillar = useBakedGeometry('models/pillar.glb', 'base')
 
   // Plain wood/rope materials (no accent tint). Faint self-emissive so the
   // bridges still read out in the dark void.
@@ -117,6 +122,16 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
         metalness: 0,
         emissive: new THREE.Color(WOOD),
         emissiveIntensity: 0.05,
+      }),
+    [],
+  )
+  // Pale stone for the pillars — matches the marble pedestals on the islands.
+  const stoneMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#ded9d0'),
+        roughness: 0.7,
+        metalness: 0,
       }),
     [],
   )
@@ -138,6 +153,8 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     POST_HEIGHT / Math.max(post.size.y, 1e-3),
     POST_THICK / Math.max(post.size.z, 1e-3),
   ]
+  // Pillar: uniform scale to a fixed height, so its own proportions are kept.
+  const pillarScale = PILLAR_HEIGHT / Math.max(pillar.size.y, 1e-3)
   const plankScale = WALKWAY / Math.max(plank.size.z, 1e-3) // plank long axis (Z) = across
   const plankDepth = plank.size.x * plankScale // along-span footprint, for spacing
 
@@ -235,6 +252,20 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
       [A.x + across.x * half, A.y, A.z + across.z * half],
       [B.x - across.x * half, B.y, B.z - across.z * half],
       [B.x + across.x * half, B.y, B.z + across.z * half],
+    ]
+
+    // ── Pillars: one either side of the bridge, at BOTH ends (4 per bridge) ───
+    // Same anchors as the posts but pushed clear of the handrail, so they frame
+    // the entrance without narrowing the walkway.
+    // Yaw so a FLAT face meets whoever is walking the bridge, rather than a
+    // corner. Falls out to 45 degrees on the diagonal bridges.
+    const pillarYaw = Math.atan2(dx, dz)
+    const pillarOut = half + PILLAR_CLEAR
+    const pillars: [number, number, number][] = [
+      [A.x - across.x * pillarOut, A.y - PILLAR_SINK, A.z - across.z * pillarOut],
+      [A.x + across.x * pillarOut, A.y - PILLAR_SINK, A.z + across.z * pillarOut],
+      [B.x - across.x * pillarOut, B.y - PILLAR_SINK, B.z - across.z * pillarOut],
+      [B.x + across.x * pillarOut, B.y - PILLAR_SINK, B.z + across.z * pillarOut],
     ]
 
     // ── Ropes ─────────────────────────────────────────────────────────────────
@@ -337,7 +368,7 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     const ropes = mergeGeoms(ropeGeoms)
     ropeGeoms.forEach((g) => g.dispose())
 
-    return { planks, posts, ropes, segments }
+    return { planks, posts, pillars, pillarYaw, ropes, segments }
   }, [a, b, plankDepth])
 
   return (
@@ -365,17 +396,26 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
         ))}
       </RigidBody>
 
-      {/* Planks (instanced, with per-plank variation) */}
-      <Instances geometry={plank.geometry} material={woodMat} limit={256} castShadow receiveShadow>
+      {/* Planks (instanced, with per-plank variation).
+          PERF: they RECEIVE shadows but no longer cast them — 256 instances through
+          the shadow pass cost far more than the thin slivers they threw into space. */}
+      <Instances geometry={plank.geometry} material={woodMat} limit={256} receiveShadow>
         {geom.planks.map((pl, i) => (
           <Instance key={i} position={pl.position} rotation={pl.rotation} scale={plankScale} />
         ))}
       </Instances>
 
       {/* Posts (a pair at each end), chunky — instanced (1 draw call) */}
-      <Instances geometry={post.geometry} material={woodMat} limit={8} castShadow>
+      <Instances geometry={post.geometry} material={woodMat} limit={8}>
         {geom.posts.map((pos, i) => (
           <Instance key={i} position={pos} scale={postScale} />
+        ))}
+      </Instances>
+
+      {/* Stone pillars flanking both ends (instanced, 1 draw call) */}
+      <Instances geometry={pillar.geometry} material={stoneMat} limit={8} castShadow receiveShadow>
+        {geom.pillars.map((pos, i) => (
+          <Instance key={i} position={pos} rotation={[0, geom.pillarYaw, 0]} scale={pillarScale} />
         ))}
       </Instances>
 
@@ -386,5 +426,6 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
   )
 }
 
+useGLTF.preload(modelUrl('models/pillar.glb'))
 useGLTF.preload(modelUrl('models/post.glb'))
 useGLTF.preload(modelUrl('models/plank.glb'))

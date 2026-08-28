@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import type { Island } from '../content'
 import { islandItems, orbitRadius, orbitOffset } from '../lib/world'
 import { useGame } from '../store'
+import { VISUALS } from '../config'
 import { ItemPreview } from './ItemPreview'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,8 +19,8 @@ import { ItemPreview } from './ItemPreview'
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Dimmer than the centerpiece cube (emissiveIntensity 2.2 in Waypoint.tsx).
-const BASE_GLOW = 0.7
-const SELECTED_GLOW = 1.4
+const BASE_GLOW = VISUALS.EMISSIVE.itemIdle
+const SELECTED_GLOW = VISUALS.EMISSIVE.itemSelected
 
 // Trim noisy prefixes and cap length so the orbiting labels stay readable.
 function shortLabel(name: string) {

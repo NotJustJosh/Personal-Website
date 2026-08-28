@@ -28,6 +28,12 @@ const MAX_DISTANCE = 16
 const EYE_HEIGHT = 1.2 // look at a point above the player's origin
 const CLIP_PADDING = 0.4 // keep the camera this far off any surface it would hit
 const RESPONSIVENESS = 16 // higher = snappier camera follow (less floaty)
+// Anti-clip boom smoothing. The raycast result changes in a single frame as
+// geometry crosses the boom, which reads as the camera SNAPPING at particular
+// angles. Easing the boom length removes that. Pulling IN is fast (it has to
+// beat the clip), letting back OUT is slow and unnoticeable.
+const BOOM_IN_SPEED = 22
+const BOOM_OUT_SPEED = 4
 
 interface CameraRigProps {
   targetRef: React.RefObject<THREE.Vector3>
@@ -45,6 +51,7 @@ export function CameraRig({ targetRef }: CameraRigProps) {
   const offset = useRef(new THREE.Vector3())
   const dir = useRef(new THREE.Vector3())
   const desired = useRef(new THREE.Vector3())
+  const boom = useRef(10) // smoothed anti-clip distance
 
   useEffect(() => {
     const el = gl.domElement
@@ -115,15 +122,19 @@ export function CameraRig({ targetRef }: CameraRigProps) {
     dir.current.copy(offset.current).normalize()
 
     // Anti-clip: shorten the boom if static geometry is in the way.
-    let dist = d
+    let wanted = d
     const ray = new rapier.Ray(
       { x: eye.current.x, y: eye.current.y, z: eye.current.z },
       { x: dir.current.x, y: dir.current.y, z: dir.current.z },
     )
     const hit = world.castRay(ray, d, true, rapier.QueryFilterFlags.EXCLUDE_DYNAMIC)
-    if (hit) dist = Math.max(MIN_DISTANCE * 0.4, hit.timeOfImpact - CLIP_PADDING)
+    if (hit) wanted = Math.max(MIN_DISTANCE * 0.4, hit.timeOfImpact - CLIP_PADDING)
 
-    desired.current.copy(eye.current).addScaledVector(dir.current, dist)
+    // Ease the boom instead of jumping to the new length.
+    const speed = wanted < boom.current ? BOOM_IN_SPEED : BOOM_OUT_SPEED
+    boom.current += (wanted - boom.current) * (1 - Math.exp(-speed * delta))
+
+    desired.current.copy(eye.current).addScaledVector(dir.current, boom.current)
 
     // Frame-rate independent smoothing toward the desired camera position.
     const alpha = 1 - Math.exp(-RESPONSIVENESS * delta)
