@@ -1,24 +1,22 @@
 import { useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { content } from '../content'
 import { asset } from '../lib/paths'
 import { islandPanel } from '../lib/world'
 import type { PanelContent } from '../content'
-import { Lines } from './Lines'
-import { CATEGORY_META, tagCategory, tagColor } from '../lib/tags'
+import { Gallery } from './Gallery'
+import { RichText } from './RichText'
+import { ContentGroups } from './ContentGroups'
+import { ContentLink } from './ContentLink'
+import { ProjectCard, chipStyle } from './ProjectCard'
+import { CATEGORY_META, tagCategory } from '../lib/tags'
 import type { TagCategory } from '../lib/tags'
 
 const CATEGORY_ORDER: TagCategory[] = ['field', 'tool', 'method', 'general']
 
-function chipStyle(tag: string, active: boolean): CSSProperties {
-  const c = tagColor(tag)
-  return active
-    ? { background: c, borderColor: c, color: '#0b1020' }
-    : { borderColor: c, color: c, background: `color-mix(in srgb, ${c} 14%, transparent)` }
-}
-
-// Renders one section (title → body → project cards → links). Tags are
-// color-coded by category and clickable to filter this section's entries.
+// Renders one section (title → body → gallery → project cards → links). Tags are
+// color-coded by category and clickable to filter this section's entries. Cards
+// come from the shared ProjectCard, so this view matches the 3D panel exactly —
+// image galleries included.
 function Section({ id, data }: { id: string; data: PanelContent }) {
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
@@ -42,8 +40,14 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
       <h2>{data.title}</h2>
 
       {data.body?.map((paragraph, i) => (
-        <p key={i}>{paragraph}</p>
+        <RichText key={i} text={paragraph} />
       ))}
+
+      {/* Island-level gallery (photos not tied to a single project) */}
+      <Gallery images={data.images} label={data.title} />
+
+      {/* Nested sub-sections (e.g. Resume / Transcript on the Resume island) */}
+      <ContentGroups groups={data.groups} />
 
       {projects.length > 0 && uniqueTags.length > 0 && (
         <div className="tagbar">
@@ -99,38 +103,12 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
       {projects.length > 0 && (
         <div className="classic__projects">
           {shown.map((proj) => (
-            <article key={proj.name} className="project">
-              <div className="project__head">
-                <h3 className="project__name">
-                  <Lines text={proj.name} />
-                </h3>
-                {proj.date && <span className="project__date">{proj.date}</span>}
-              </div>
-              {proj.description && <p className="project__desc">{proj.description}</p>}
-              {proj.tags && (
-                <div className="project__tags">
-                  {proj.tags.map((tag) => (
-                    <button
-                      key={tag}
-                      className="chip chip--sm"
-                      style={chipStyle(tag, activeTag === tag)}
-                      onClick={() => toggle(tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {proj.links && (
-                <div className="project__links">
-                  {proj.links.map((link) => (
-                    <a key={link.url} href={asset(link.url)} target="_blank" rel="noreferrer noopener">
-                      {link.label}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </article>
+            <ProjectCard
+              key={proj.name}
+              project={proj}
+              activeTag={activeTag}
+              onToggleTag={toggle}
+            />
           ))}
         </div>
       )}
@@ -138,15 +116,7 @@ function Section({ id, data }: { id: string; data: PanelContent }) {
       {data.links && (
         <div className="classic__links">
           {data.links.map((link) => (
-            <a
-              key={link.url}
-              className="btn btn--primary"
-              href={asset(link.url)}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              {link.label}
-            </a>
+            <ContentLink key={link.url} link={link} className="btn btn--primary" />
           ))}
         </div>
       )}

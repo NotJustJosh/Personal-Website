@@ -1,17 +1,20 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Billboard, Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { Island } from '../content'
 import { islandItems, orbitRadius, orbitOffset } from '../lib/world'
 import { useGame } from '../store'
+import { ItemPreview } from './ItemPreview'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Item icons that circle an island when you're standing on it. Each icon maps
 //  to one item (a project or a contact link) and shows that item's NAME above a
-//  glowing dot. Walk up to one (Player.tsx picks the nearest within ORBIT.REACH)
-//  and it brightens + grows in the island's accent color; press E to open the
-//  panel focused on that item.
+//  glowing dot — plus, if the project has `images` in content.ts, a small framed
+//  preview of its cover image floating above the name. Walk up to one
+//  (Player.tsx picks the nearest within ORBIT.REACH) and it brightens + grows in
+//  the island's accent color; press E to open the panel focused on that item
+//  (where the full gallery lives).
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Dimmer than the centerpiece cube (emissiveIntensity 2.2 in Waypoint.tsx).
@@ -29,6 +32,15 @@ export function OrbitingItems({ island }: { island: Island }) {
   const radius = orbitRadius(island)
   const groupRefs = useRef<(THREE.Group | null)[]>([])
   const matRefs = useRef<(THREE.MeshStandardMaterial | null)[]>([])
+
+  // Preview images are only mounted once you've actually set foot on the island,
+  // so their textures aren't downloaded up-front for every island in the world.
+  // (One cheap re-render on arrival; the per-frame work below stays ref-based.)
+  const onIsland = useGame((s) => s.nearbyIsland === island.id)
+  const [visited, setVisited] = useState(false)
+  useEffect(() => {
+    if (onIsland) setVisited(true)
+  }, [onIsland])
 
   useFrame((state) => {
     const t = state.clock.elapsedTime
@@ -78,6 +90,10 @@ export function OrbitingItems({ island }: { island: Island }) {
               toneMapped={false}
             />
           </mesh>
+          {/* cover image preview, floating above the name */}
+          {visited && item.image && (
+            <ItemPreview url={item.image.thumb} accentColor={island.accentColor} />
+          )}
           {/* name label above, always facing the camera */}
           <Billboard position={[0, 0.85, 0]}>
             <Text

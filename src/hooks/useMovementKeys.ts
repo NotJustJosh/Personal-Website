@@ -10,7 +10,6 @@ export interface MovementKeys {
   left: boolean
   right: boolean
   jump: boolean
-  sprint: boolean
 }
 
 // Map both WASD and arrow keys onto movement intents.
@@ -24,8 +23,6 @@ const KEY_MAP: Record<string, keyof MovementKeys> = {
   KeyD: 'right',
   ArrowRight: 'right',
   Space: 'jump',
-  ShiftLeft: 'sprint',
-  ShiftRight: 'sprint',
 }
 
 export function useMovementKeys() {
@@ -35,7 +32,6 @@ export function useMovementKeys() {
     left: false,
     right: false,
     jump: false,
-    sprint: false,
   })
 
   useEffect(() => {
@@ -58,7 +54,6 @@ export function useMovementKeys() {
         left: false,
         right: false,
         jump: false,
-        sprint: false,
       }
     }
 

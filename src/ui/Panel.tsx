@@ -1,26 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { PanelContent } from '../content'
-import { asset } from '../lib/paths'
-import { Lines } from './Lines'
-import { CATEGORY_META, tagCategory, tagColor } from '../lib/tags'
+import { ContentLink } from './ContentLink'
+import { Gallery } from './Gallery'
+import { RichText } from './RichText'
+import { ContentGroups } from './ContentGroups'
+import { ProjectCard, chipStyle } from './ProjectCard'
+import { CATEGORY_META, tagCategory } from '../lib/tags'
 import type { TagCategory } from '../lib/tags'
 
 const CATEGORY_ORDER: TagCategory[] = ['field', 'tool', 'method', 'general']
-
-// A tag chip, colored by its category. Active = filled; otherwise outlined.
-function chipStyle(tag: string, active: boolean): CSSProperties {
-  const c = tagColor(tag)
-  return active
-    ? { background: c, borderColor: c, color: '#0b1020' }
-    : { borderColor: c, color: c, background: `color-mix(in srgb, ${c} 14%, transparent)` }
-}
 
 // The HTML/DOM overlay shown when you interact with an island (press E) or click
 // a persistent button. Pure DOM — crisp + accessible.
 //
 // `focusKey` scrolls that entry into view and highlights it in the island accent.
 // Tags are color-coded by category and clickable to filter the project list.
+// Cards (incl. their image galleries) come from the shared ProjectCard, so the
+// Classic 2D view renders exactly the same thing.
 export function Panel({
   data,
   focusKey,
@@ -82,10 +79,14 @@ export function Panel({
         <h2 className="panel__title">{data.title}</h2>
 
         {data.body?.map((paragraph, i) => (
-          <p key={i} className="panel__body">
-            {paragraph}
-          </p>
+          <RichText key={i} text={paragraph} className="panel__body" />
         ))}
+
+        {/* Island-level gallery (photos not tied to a single project) */}
+        <Gallery images={data.images} label={data.title} />
+
+        {/* Nested sub-sections (e.g. Resume / Transcript on the Resume island) */}
+        <ContentGroups groups={data.groups} />
 
         {projects.length > 0 && uniqueTags.length > 0 && (
           <div className="tagbar">
@@ -143,42 +144,14 @@ export function Panel({
             {shown.map(({ p, i }) => {
               const key = `project-${i}`
               return (
-                <article
+                <ProjectCard
                   key={p.name}
-                  data-itemkey={key}
-                  className={`project${focusKey === key ? ' is-focused' : ''}`}
-                >
-                  <div className="project__head">
-                    <h3 className="project__name">
-                      <Lines text={p.name} />
-                    </h3>
-                    {p.date && <span className="project__date">{p.date}</span>}
-                  </div>
-                  {p.description && <p className="project__desc">{p.description}</p>}
-                  {p.tags && (
-                    <div className="project__tags">
-                      {p.tags.map((tag) => (
-                        <button
-                          key={tag}
-                          className="chip chip--sm"
-                          style={chipStyle(tag, activeTag === tag)}
-                          onClick={() => toggle(tag)}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {p.links && (
-                    <div className="project__links">
-                      {p.links.map((link) => (
-                        <a key={link.url} href={asset(link.url)} target="_blank" rel="noreferrer noopener">
-                          {link.label}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </article>
+                  project={p}
+                  itemKey={key}
+                  focused={focusKey === key}
+                  activeTag={activeTag}
+                  onToggleTag={toggle}
+                />
               )
             })}
             {shown.length === 0 && (
@@ -194,16 +167,12 @@ export function Panel({
             {data.links.map((link, i) => {
               const key = `link-${i}`
               return (
-                <a
+                <ContentLink
                   key={link.url}
-                  data-itemkey={key}
+                  link={link}
+                  itemKey={key}
                   className={`btn btn--primary${focusKey === key ? ' is-focused' : ''}`}
-                  href={asset(link.url)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  {link.label}
-                </a>
+                />
               )
             })}
           </div>

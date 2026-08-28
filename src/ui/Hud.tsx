@@ -32,10 +32,7 @@ export function Hud() {
           <kbd>D</kbd> move
         </span>
         <span>
-          <kbd>Shift</kbd> sprint
-        </span>
-        <span>
-          <kbd>Space</kbd> jump ×2
+          <kbd>Space</kbd> jump
         </span>
         <span>click to look · scroll to zoom</span>
         <span>

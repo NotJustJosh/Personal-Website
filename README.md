@@ -22,12 +22,12 @@ menu. It builds to static files and deploys to **GitHub Pages**.
 | Action | Input |
 | --- | --- |
 | Move | `W` `A` `S` `D` / arrow keys |
-| Sprint | hold `Shift` |
-| Jump / double-jump | `Space` (twice) |
+| Jump | `Space` |
 | Look around | drag the mouse |
 | Zoom | scroll wheel |
 | Interact (open an island's panel) | `E` |
 | Close a panel | `Esc` or the × button |
+| Browse a project's images | click any thumbnail; then `←` / `→`, `Esc` to close |
 | Fast-travel | the **Fast travel** menu (top-right) |
 
 Fall off the world? You're gently respawned on the nearest island — no penalty.
@@ -91,6 +91,101 @@ Rules:
 - Link URLs: a full `https://…`, a bare email (auto-`mailto:`), or a file in `/public`
   (e.g. `resume.pdf`) — local files get the GitHub Pages base path automatically.
 
+### Copy-to-clipboard links
+
+Add `copy: true` to a link and clicking it copies the value (minus any `mailto:` /
+`tel:` prefix) and shows a toast, instead of opening a mail client:
+
+```ts
+links: [
+  { label: 'Email (click to copy)', url: 'you@example.com', copy: true },
+  { label: 'GitHub', url: 'https://github.com/you' },   // normal link
+]
+```
+
+Works in the 3D panel and the Classic view. Falls back to a hidden-textarea copy if
+the browser blocks the async Clipboard API.
+
+### Formatting prose (descriptions + body text)
+
+Long text gets wrapped across several source lines in `content.ts` just to keep the file
+readable — and those wrapping newlines are the *same character* as one you type on
+purpose, so a bare newline can't mean "line break". The rules are explicit instead:
+
+| You write | You get |
+| --- | --- |
+| a line starting with `- ` | a bullet in a list |
+| a **blank** line | a new paragraph |
+| anything else | flows into the line above, joined with a space |
+
+```ts
+description: `- Built the thing
+              that does the job
+              - Shipped it`,
+```
+→ two bullets, the first reading "Built the thing that does the job".
+
+A project's `name` is different: there **every** newline breaks, which is what the
+multi-line Honors entries rely on.
+
+### Nest content inside a section (`groups`)
+
+When one island holds several distinct things — Resume *and* transcript, say — use
+`groups`. Each is a headed block with its own text, gallery and buttons:
+
+```ts
+content: {
+  title: 'Resources',
+  groups: [
+    { title: 'Resume',
+      body: ['Full resume, kept up to date.'],
+      links: [{ label: 'Download Resume (PDF)', url: 'resume.pdf' }] },
+    { title: 'Transcript',
+      images: ['images/transcript-preview.png'],
+      links: [{ label: 'Download Transcript (PDF)', url: 'transcript.pdf' }] },
+  ],
+}
+```
+
+Groups render between the island's body text and its project cards, in both the 3D panel
+and the Classic view.
+
+### Add images (projects, papers, articles, anything)
+
+Drop the files into **`public/images/`**, then add an `images` array to any project —
+or to an island's `content` for photos that aren't tied to one project:
+
+```ts
+{
+  name: 'IMU-Based Hand Gesture Interface',
+  description: '…',
+  images: [
+    'images/glove-v2.jpg',                        // simplest form
+    { src: 'images/paper.png',                    // …or with extras
+      caption: 'Published in JPGSS Vol. 39',
+      thumb: 'images/paper-thumb.png',            // lighter file for previews
+      href: 'https://example.com/paper.pdf' },    // click-through in the lightbox
+  ],
+}
+```
+
+That one array gives you, with no other changes:
+
+- a **small framed preview** of the first image floating above that project's orbiting
+  icon out in the 3D world (island view),
+- a **thumbnail strip** on the project card in **both** the 3D panel and the Classic 2D
+  view,
+- a **full-size gallery** when you click any thumbnail — `←`/`→` to page through,
+  captions, an optional link out, `Esc` to close.
+
+Notes:
+- The **first** image is the cover (the 3D preview + lead thumbnail). Reorder to change it.
+- Paths follow the same rules as links: a file in `/public` (`images/foo.jpg`) or a full
+  `https://…` URL. Local files get the GitHub Pages base path automatically.
+- Cover images are downloaded the first time you **set foot on that island**, not at
+  page load — so keep them modest (~800px) or supply a small `thumb`.
+- Preview size in the 3D world: `ORBIT.PREVIEW_*` in [`src/config.ts`](src/config.ts).
+
 ### Remove an island
 Delete its entry **and** remove its id from any other island's `neighbors`.
 
@@ -100,7 +195,7 @@ Delete its entry **and** remove its id from any other island's `neighbors`.
 
 | What | Where |
 | --- | --- |
-| Walk speed, sprint speed, jump speed, **jump count (double jump)** | constants at the top of [`src/components/Player.tsx`](src/components/Player.tsx) |
+| Walk speed, jump speed | constants at the top of [`src/components/Player.tsx`](src/components/Player.tsx) |
 | **World-border size**, fall-**respawn** Y, gravity | [`src/config.ts`](src/config.ts) (`WORLD`) |
 | Default island radius / thickness | [`src/config.ts`](src/config.ts) (`ISLAND`) |
 | Camera distance, pitch clamp, sensitivity, anti-clip padding | constants at the top of [`src/components/CameraRig.tsx`](src/components/CameraRig.tsx) |
@@ -140,21 +235,31 @@ src/
     Experience.tsx      ← islands + bridges + border + lights + player + camera
   components/
     Island.tsx          ← one island (collider, slab, accent light, label) from data
+    OrbitingItems.tsx   ← per-project icons circling an island (+ image previews)
+    ItemPreview.tsx     ← the small framed cover image floating over an item
     Bridge.tsx          ← procedural walkable light-bridge between two islands
     WorldBorder.tsx     ← faint shimmer wall at the playable edge
-    Player.tsx          ← controller: move/sprint/double-jump/respawn/border/teleport
+    Player.tsx          ← controller: move/jump/respawn/border/teleport
     CameraRig.tsx       ← orbit camera w/ pitch clamp + raycast anti-clip
     Avatar.tsx          ← example .glb avatar (not used by default)
   ui/                   ← plain HTML/DOM over the canvas
     LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI,
     FastTravelMenu, FadeOverlay, InputManager, ClassicView
+    ProjectCard.tsx     ← one project card, shared by Panel + ClassicView
+    Gallery.tsx         ← image thumbnails + the full-size lightbox
+    ContentGroups.tsx   ← nested sub-sections (`groups`) inside an island
+    RichText.tsx        ← "- " bullets / blank-line paragraphs in prose
+    ContentLink.tsx     ← a link, or a copy-to-clipboard button (`copy: true`)
+    Toast.tsx           ← transient "Copied …" notification
   lib/
     world.ts            ← derived helpers: bridges, nearest island, spawn, panel adapter
     paths.ts            ← base-path-aware URL helper
+    clipboard.ts        ← clipboard copy with a legacy fallback
+    media.ts            ← normalizes content.ts `images` entries into real URLs
     device.ts           ← WebGL + mobile detection
     gltf.ts             ← GLTF loader with Draco support
   hooks/
-    useMovementKeys.ts  ← held-key movement state (incl. Shift sprint)
+    useMovementKeys.ts  ← held-key movement state (WASD/arrows + Space)
 ```
 
 ---
