@@ -4,6 +4,7 @@ import { RigidBody, CapsuleCollider, useRapier } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import { useMovementKeys } from '../hooks/useMovementKeys'
+import { PlayerAvatar } from './PlayerAvatar'
 import { useGame } from '../store'
 import type { ItemRef } from '../store'
 import { content } from '../content'
@@ -268,11 +269,9 @@ export function Player({ targetRef }: PlayerProps) {
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} />
 
-      {/* Visible player. Swap this <mesh> for <Avatar /> to use a .glb model. */}
-      <mesh castShadow>
-        <capsuleGeometry args={[RADIUS, HALF_HEIGHT * 2, 8, 16]} />
-        <meshStandardMaterial color="#5b8cff" roughness={0.4} metalness={0.1} />
-      </mesh>
+      {/* Visible player: a glass icosahedron with a glowing core that takes the
+          colour of the island you're on, floating a little off the ground. */}
+      <PlayerAvatar />
     </RigidBody>
   )
 }

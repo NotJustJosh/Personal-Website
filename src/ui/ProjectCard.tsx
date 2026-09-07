@@ -1,14 +1,21 @@
-import type { CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import type { Project } from '../content'
 import { tagColor } from '../lib/tags'
+import { resolveImages } from '../lib/media'
 import { Lines } from './Lines'
 import { RichText } from './RichText'
-import { Gallery } from './Gallery'
+import { GalleryGrid, Lightbox } from './Gallery'
+import { VideoClip } from './VideoClip'
 import { ContentLink } from './ContentLink'
 
 // One project/honor/experience card. Shared by the 3D panel (Panel.tsx) and the
 // Classic 2D view (ClassicView.tsx) so both stay in sync — including the image
 // gallery, which is why this was pulled out of the two near-identical copies.
+//
+// Images are split: the FIRST one sits in a small box beside the title (it's the
+// cover — the same image that floats over this item in the 3D world), and the
+// rest form the thumbnail grid lower down. Both drive ONE lightbox over the full
+// list, so browsing from either place steps through every image in order.
 
 /** A tag chip, colored by its category. Active = filled; otherwise outlined. */
 export function chipStyle(tag: string, active: boolean): CSSProperties {
@@ -33,9 +40,24 @@ export function ProjectCard({
   itemKey?: string
   focused?: boolean
 }) {
+  const images = useMemo(() => resolveImages(project.images), [project.images])
+  const [open, setOpen] = useState<number | null>(null)
+  const cover = images[0]
+  const rest = images.slice(1)
+
   return (
     <article data-itemkey={itemKey} className={`project${focused ? ' is-focused' : ''}`}>
-      <div className="project__head">
+      <div className={`project__head${cover ? ' project__head--cover' : ''}`}>
+        {cover && (
+          <button
+            className="project__cover"
+            onClick={() => setOpen(0)}
+            aria-label={cover.caption || `View images of ${project.name}`}
+            title={cover.caption || undefined}
+          >
+            <img src={cover.thumb} alt={cover.caption || ''} loading="lazy" decoding="async" />
+          </button>
+        )}
         <h3 className="project__name">
           <Lines text={project.name} />
         </h3>
@@ -44,8 +66,16 @@ export function ProjectCard({
 
       {project.description && <RichText text={project.description} className="project__desc" />}
 
-      {/* Thumbnails → click any one to open the full-size gallery. */}
-      <Gallery images={project.images} label={project.name} />
+      {/* Every image AFTER the cover. Indices are offset by 1 so the shared
+          lightbox below still walks the full list in authored order. */}
+      <GalleryGrid images={rest} onOpen={setOpen} indexOffset={1} label={project.name} />
+
+      {open !== null && (
+        <Lightbox images={images} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+      )}
+
+      {/* A short muted loop, for projects that are better shown moving. */}
+      <VideoClip video={project.video} label={project.name} />
 
       {project.tags && (
         <div className="project__tags">

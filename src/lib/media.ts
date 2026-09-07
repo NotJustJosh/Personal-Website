@@ -1,4 +1,4 @@
-import type { Media, MediaItem } from '../content'
+import type { Media, MediaItem, Video } from '../content'
 import { asset } from './paths'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,4 +45,29 @@ export function resolveImages(list?: Media[]): ResolvedImage[] {
  */
 export function coverImage(list?: Media[]): ResolvedImage | null {
   return resolveImages(list)[0] ?? null
+}
+
+export interface ResolvedVideo {
+  /** Clip URL, ready to drop into a src attribute. */
+  src: string
+  /** Still frame shown before the clip loads. May be undefined. */
+  poster?: string
+  /** Caption under the clip; also used as the accessible label. May be empty. */
+  caption: string
+}
+
+/**
+ * Normalize + resolve a `video` entry, mirroring {@link resolveImages}. Returns
+ * null for a missing or blank `src`, so an empty string in content.ts renders
+ * nothing rather than an empty player.
+ */
+export function resolveVideo(v?: Video): ResolvedVideo | null {
+  if (!v) return null
+  const item = typeof v === 'string' ? { src: v } : v
+  if (!item.src?.trim()) return null
+  return {
+    src: asset(item.src),
+    poster: item.poster?.trim() ? asset(item.poster) : undefined,
+    caption: item.caption?.trim() ?? '',
+  }
 }

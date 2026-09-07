@@ -25,3 +25,7 @@ dist-ssr
 
 # Temp scaffold
 .__scaffold__
+
+# Untouched originals of the images that were cropped to 4:3 (kept out of the
+# repo: ~37 MB of 12 MP source photos, and not needed to build the site).
+image-originals/

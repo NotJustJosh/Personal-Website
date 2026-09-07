@@ -19,7 +19,7 @@ import type { ResolvedImage } from '../lib/media'
 // Keys the lightbox swallows so the world behind it stays put while you browse.
 const SWALLOWED = /^(KeyW|KeyA|KeyS|KeyD|KeyE|Space|Arrow(Up|Down|Left|Right))$/
 
-function Lightbox({
+export function Lightbox({
   images,
   index,
   onIndex,
@@ -113,8 +113,51 @@ function Lightbox({
 }
 
 /**
- * Thumbnail grid for an `images` array. Renders nothing when there are none, so
- * callers can drop `<Gallery images={p.images} />` in unconditionally.
+ * The thumbnail grid on its own, with the lightbox left to the caller.
+ *
+ * ProjectCard needs this because it splits a project's images up: the cover
+ * goes in a small box beside the title and only the REST form the grid, yet
+ * both have to drive one shared lightbox over the full list. `indexOffset` is
+ * how far into that full list this grid starts, so clicking the first thumbnail
+ * of a `rest` slice reports index 1 rather than 0.
+ */
+export function GalleryGrid({
+  images,
+  onOpen,
+  indexOffset = 0,
+  label,
+}: {
+  images: ResolvedImage[]
+  onOpen: (i: number) => void
+  indexOffset?: number
+  label?: string
+}) {
+  if (images.length === 0) return null
+  return (
+    <div className="gallery">
+      {images.map((img, i) => (
+        <button
+          key={img.src + i}
+          className="gallery__item"
+          onClick={() => onOpen(indexOffset + i)}
+          aria-label={
+            img.caption || `View image ${indexOffset + i + 1}${label ? ` of ${label}` : ''}`
+          }
+          title={img.caption || undefined}
+        >
+          <img src={img.thumb} alt={img.caption || ''} loading="lazy" decoding="async" />
+          {img.caption && <span className="gallery__cap">{img.caption}</span>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Thumbnail grid for an `images` array, wired to its own lightbox. Renders
+ * nothing when there are none, so callers can drop `<Gallery images={p.images} />`
+ * in unconditionally. Used for island- and group-level images; ProjectCard
+ * drives {@link GalleryGrid} and {@link Lightbox} directly instead.
  */
 export function Gallery({ images, label }: { images?: Media[]; label?: string }) {
   const [open, setOpen] = useState<number | null>(null)
@@ -123,21 +166,7 @@ export function Gallery({ images, label }: { images?: Media[]; label?: string })
 
   return (
     <>
-      <div className="gallery">
-        {resolved.map((img, i) => (
-          <button
-            key={img.src + i}
-            className="gallery__item"
-            onClick={() => setOpen(i)}
-            aria-label={img.caption || `View image ${i + 1}${label ? ` of ${label}` : ''}`}
-            title={img.caption || undefined}
-          >
-            <img src={img.thumb} alt={img.caption || ''} loading="lazy" decoding="async" />
-            {img.caption && <span className="gallery__cap">{img.caption}</span>}
-          </button>
-        ))}
-      </div>
-
+      <GalleryGrid images={resolved} onOpen={setOpen} label={label} />
       {open !== null && (
         <Lightbox images={resolved} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
       )}

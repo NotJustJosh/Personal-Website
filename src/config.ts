@@ -61,10 +61,10 @@ export const VISUALS = {
   /** Emissive strengths. These are what actually glow through the bloom pass. */
   EMISSIVE: {
     /** The spinning cube on each pedestal. */
-    marker: 3.2,
+    marker: 4.5,
     /** The orbiting project icons: resting, and when you're next to one. */
-    itemIdle: 1.6,
-    itemSelected: 3.4,
+    itemIdle: 3.0,
+    itemSelected: 6.5,
   },
 
   /** Key/fill/bounce. Cool key + warm fill gives geometry a colour axis. */

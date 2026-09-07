@@ -15,9 +15,24 @@ export const ISLANDS = content.islands
  */
 export const CONTENT_ISLANDS = ISLANDS.filter((i) => !i.platform)
 
-/** The radius of an island (its `size`, or the default). */
+/**
+ * The radius of an island (its `size`, or the default).
+ *
+ * NOTE: this is the radius its ground mesh is scaled to on the X axis, so it's
+ * only the true rim distance for a ROUND island. A stretched ground model (see
+ * `groundModel`) reaches less far on its short axis — anything that needs the
+ * actual rim in a given direction wants {@link topFaceReach} instead.
+ */
 export function islandRadius(island: Island): number {
   return island.size ?? ISLAND.RADIUS
+}
+
+/** Ground mesh used when an island doesn't name its own. */
+export const DEFAULT_GROUND_MODEL = 'models/island.glb'
+
+/** The ground mesh for an island: its `groundModel`, or the default. */
+export function groundModelOf(island: Island): string {
+  return island.groundModel ?? DEFAULT_GROUND_MODEL
 }
 
 export function getIsland(id: IslandId): Island | undefined {

@@ -3,8 +3,8 @@ import * as THREE from 'three'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import { useGLTF, Instances, Instance } from '@react-three/drei'
 import type { Island } from '../content'
-import { modelUrl, useBakedGeometry } from '../lib/gltf'
-import { islandRadius } from '../lib/world'
+import { modelUrl, useBakedGeometry, topFaceReach } from '../lib/gltf'
+import { islandRadius, groundModelOf } from '../lib/world'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  A rope bridge between two islands, built from the user's post.glb + plank.glb.
@@ -24,7 +24,21 @@ import { islandRadius } from '../lib/world'
 
 // ── Tunables ─────────────────────────────────────────────────────────────────
 const WALKWAY = 2.2 // deck width (world units)
-const POST_INSET = 2 // pull endpoints in from the rim so posts sit firmly on the island
+// How far ONTO an island the deck runs, measured inward from the rim. It has to
+// clear the mesh's bevelled edge or the last planks land on the slope and the
+// bridge reads as stopping short — but the rim scales with the island, so a
+// fixed inset either ate half of a small island or barely reached the flat top
+// of a big one. Proportional, with sane bounds.
+//
+// Applied to the MEASURED rim for this bearing (see islandRim), not to `size` —
+// on a stretched island the short axis needs a proportionally smaller inset or
+// it loses most of its landing.
+const INSET_FRACTION = 0.24
+const INSET_MIN = 1.4
+const INSET_MAX = 3.8
+const islandInset = (radius: number) =>
+  Math.min(INSET_MAX, Math.max(INSET_MIN, radius * INSET_FRACTION))
+
 const POST_HEIGHT = 1.05 // ~waist height vs the ~1.8-unit player
 const POST_THICK = 0.42 // post cross-section (chunky, independent of height)
 const PLANK_GAP = 0.14 // gap between plank slats
@@ -66,6 +80,26 @@ function hashString(s: string) {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return h % 1000
+}
+
+/**
+ * Distance from an island's centre to its walkable rim along (dirX, dirZ).
+ *
+ * Island.tsx renders the ground mesh at `islandRadius / (size.x / 2)`, so the
+ * same factor converts the baked geometry's units into world units here. Falls
+ * back to the nominal radius if the mesh yields nothing usable, which keeps a
+ * bridge roughly right rather than collapsing it to zero length.
+ */
+function islandRim(
+  island: Island,
+  ground: { geometry: THREE.BufferGeometry; size: THREE.Vector3 },
+  dirX: number,
+  dirZ: number,
+): number {
+  const radius = islandRadius(island)
+  const scale = radius / Math.max(ground.size.x / 2, 1e-3)
+  const reach = topFaceReach(ground.geometry, dirX, dirZ) * scale
+  return reach > 1e-3 ? reach : radius
 }
 
 function tubeFromPoints(points: THREE.Vector3[], radius: number, segments: number) {
@@ -111,6 +145,12 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
   const post = useBakedGeometry('models/post.glb', 'base')
   const plank = useBakedGeometry('models/plank.glb', 'top')
   const pillar = useBakedGeometry('models/pillar.glb', 'base')
+
+  // The two islands' ground meshes, baked exactly as Island.tsx bakes them, so
+  // the deck can be attached to where the rim ACTUALLY is along this bearing
+  // rather than to a circle of radius `size`.
+  const groundA = useBakedGeometry(groundModelOf(a), 'top', a.groundRotation ?? 0)
+  const groundB = useBakedGeometry(groundModelOf(b), 'top', b.groundRotation ?? 0)
 
   // Plain wood/rope materials (no accent tint). Faint self-emissive so the
   // bridges still read out in the dark void.
@@ -159,17 +199,28 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
   const plankDepth = plank.size.x * plankScale // along-span footprint, for spacing
 
   const geom = useMemo(() => {
-    const Ra = islandRadius(a)
-    const Rb = islandRadius(b)
     const dxC = b.position[0] - a.position[0]
     const dzC = b.position[2] - a.position[2]
     const horizC = Math.hypot(dxC, dzC) || 1
     const hx = dxC / horizC
     const hz = dzC / horizC
 
-    // Endpoints at the island RIMS.
-    const ea = Math.max(0, Ra - POST_INSET)
-    const eb = Math.max(0, Rb - POST_INSET)
+    // Where each island's rim actually is along THIS bearing. `size` only fixes
+    // the X radius, so on a stretched ground mesh it badly misreports the rim on
+    // other axes — the platform reaches 15 along X but 7.8 along Z, which left
+    // the bridge from `about` ending 3.6 units short of the island, in mid-air.
+    // Measure the real top face instead, and fall back to the nominal radius if
+    // a mesh somehow has no usable geometry.
+    const rimA = islandRim(a, groundA, hx, hz)
+    const rimB = islandRim(b, groundB, -hx, -hz)
+
+    // Endpoints INSET from those rims, so the deck lands on the flat top rather
+    // than on the bevel. The inset scales with the reach it's cutting into, not
+    // with `size`, or a short axis would lose most of its landing.
+    const insetA = islandInset(rimA)
+    const insetB = islandInset(rimB)
+    const ea = Math.max(0, rimA - insetA)
+    const eb = Math.max(0, rimB - insetB)
     const A = new THREE.Vector3(a.position[0] + hx * ea, a.position[1], a.position[2] + hz * ea)
     const B = new THREE.Vector3(b.position[0] - hx * eb, b.position[1], b.position[2] - hz * eb)
     const dx = B.x - A.x
@@ -189,7 +240,7 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     //     island level (walkable, no clipping into the base);
     //   • parabola in the middle → it hangs naturally, like a real rope bridge.
     const L = Math.hypot(horiz, dy) || 1
-    const flat = THREE.MathUtils.clamp(POST_INSET / L, 0.04, 0.2) // flat fraction per end
+    const flat = THREE.MathUtils.clamp(((insetA + insetB) / 2) / L, 0.04, 0.2) // flat fraction per end
     const sagProfile = (t: number) => {
       if (t <= flat || t >= 1 - flat) return 0
       const u = (t - flat) / (1 - 2 * flat)
@@ -369,7 +420,7 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     ropeGeoms.forEach((g) => g.dispose())
 
     return { planks, posts, pillars, pillarYaw, ropes, segments }
-  }, [a, b, plankDepth])
+  }, [a, b, groundA, groundB, plankDepth])
 
   return (
     <group>

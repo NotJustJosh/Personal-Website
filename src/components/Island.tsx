@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { Text, Billboard, useGLTF } from '@react-three/drei'
 import { RigidBody } from '@react-three/rapier'
 import type { Island as IslandData } from '../content'
-import { islandRadius, islandHasOrbit } from '../lib/world'
+import { islandRadius, islandHasOrbit, groundModelOf } from '../lib/world'
 import { ISLAND } from '../config'
 import { useModel, modelUrl, useBakedGeometry } from '../lib/gltf'
 import { OrbitingItems } from './OrbitingItems'
@@ -17,7 +17,6 @@ import { Waypoint } from './Waypoint'
 //     items) the orbiting icons + tag-puffs.
 
 const ISLAND_COLOR = '#867c64' // natural earthy tone (the accent light tints it)
-const DEFAULT_GROUND_MODEL = 'models/island.glb'
 
 // Optional extra .glb set dressing. Only mounted when `model` is set in content.ts.
 function ModelDressing({ url }: { url: string }) {
@@ -55,7 +54,7 @@ export function Island({ island }: { island: IslandData }) {
         <RigidBody type="fixed" colliders="hull" friction={1}>
           <IslandModel
             radius={radius}
-            url={island.groundModel ?? DEFAULT_GROUND_MODEL}
+            url={groundModelOf(island)}
             rotateY={island.groundRotation ?? 0}
           />
         </RigidBody>

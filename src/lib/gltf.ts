@@ -83,3 +83,37 @@ export function useBakedGeometry(path: string, anchor: 'base' | 'top', rotateY =
     return { geometry, size }
   }, [scene, anchor, rotateY])
 }
+
+/**
+ * How far the mesh's TOP face reaches from its centre along a horizontal
+ * bearing, in the geometry's own units — multiply by the caller's uniform
+ * scale to get world units. Expects 'top'-anchored geometry (top face at y=0).
+ *
+ * Bridges need this because islands are NOT circles. xscaledisland.glb carries
+ * a node scale of [0.52, 1, 1], so once it's rotated and fitted to `size` on X
+ * it reaches 15 units along X but only 7.8 along Z. Deriving the attach point
+ * from `size` alone therefore left the deck floating 3.6 units off the rim on
+ * the short axis, while the polygon's corners reach 12.8 on the diagonals.
+ * Projecting onto the bearing handles ellipses and irregular outlines alike.
+ */
+export function topFaceReach(
+  geometry: THREE.BufferGeometry,
+  dirX: number,
+  dirZ: number,
+): number {
+  const pos = geometry.attributes.position as THREE.BufferAttribute
+  if (!pos) return 0
+
+  let topY = -Infinity
+  for (let i = 0; i < pos.count; i++) topY = Math.max(topY, pos.getY(i))
+
+  // Support function over the top face only: the walkable rim is what a deck
+  // has to land on, not the wider silhouette of the tapered underside.
+  const EPS = 1e-3
+  let best = 0
+  for (let i = 0; i < pos.count; i++) {
+    if (pos.getY(i) < topY - EPS) continue
+    best = Math.max(best, pos.getX(i) * dirX + pos.getZ(i) * dirZ)
+  }
+  return best
+}

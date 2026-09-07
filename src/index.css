@@ -302,6 +302,8 @@ kbd {
   border-radius: 12px;
 }
 .project__name {
+  /* Take up the slack so the date stays pinned right once a cover is present. */
+  flex: 1 1 auto;
   margin: 0 0 6px;
   font-size: 1.1rem;
 }
@@ -763,6 +765,29 @@ kbd {
   right: 18px;
 }
 
+/* ───────────────────────────── Looping video clip ───────────────────────────── */
+/* A short muted loop on a project card (shared by the 3D panel + Classic view).
+   Matches the gallery thumbnails' frame so the two stack cleanly. */
+.clip {
+  margin: 0 0 12px;
+}
+.clip__video {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  /* `contain` not `cover`: a gait test shouldn't get its legs cropped off. */
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+}
+.clip__cap {
+  margin: 5px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
 /* ───────────────────────────── Classic (2D) view ───────────────────────────── */
 .classic {
   position: fixed;
@@ -938,6 +963,36 @@ kbd {
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+}
+/* With a cover box beside it, centre the row instead of sitting on the text
+   baseline — a 54px image has no baseline worth aligning the date to. */
+.project__head--cover {
+  align-items: center;
+}
+/* The cover: the first image as a small square left of the title. Opens the
+   same lightbox as the grid below, hence the zoom-in cursor. */
+.project__cover {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: zoom-in;
+  transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.project__cover:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent, #5b8cff);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+.project__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .project__date {
   flex: 0 0 auto;

@@ -124,6 +124,20 @@
 //
 //  Keep previews small (~800px wide, compressed) — every cover image is fetched
 //  the first time you set foot on that island.
+//
+//  ─── HOW TO ADD A LOOPING VIDEO ────────────────────────────────────────────
+//  For things better shown moving. Drop the clip in public/videos/, then give
+//  the project a `video` (one per card, rendered under the thumbnails):
+//
+//    video: 'videos/spider-robot.mp4'               // simplest form
+//    video: { src: 'videos/spider-robot.mp4',       // …or with extras
+//             poster: 'images/spider-robot.jpg',    // still shown while loading
+//             caption: 'Gait test — servo PWM from the DE10-Nano' }
+//
+//  It autoplays MUTED and loops forever — browsers block autoplay with sound,
+//  so any audio track is ignored. Keep clips to 3-8 seconds and a few MB; they
+//  load with the card, and Pages caps a single file at 100 MB. Anyone with
+//  "reduce motion" set gets a paused frame plus controls instead.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ZONE_ACCENTS } from './config'
@@ -174,6 +188,34 @@ export interface MediaItem {
 /** An image, written either as a bare URL string or as a full {@link MediaItem}. */
 export type Media = string | MediaItem
 
+/**
+ * A short looping clip — the video counterpart of {@link MediaItem}. Drop the
+ * file in public/videos/ and reference it by path:
+ *
+ *     video: 'videos/spider-robot.mp4'
+ *
+ * …or as an object for a caption / a still frame to show while it loads:
+ *
+ *     video: { src: 'videos/spider-robot.mp4',
+ *              poster: 'images/spider-robot.jpg',
+ *              caption: 'Gait test — servo PWM driven from the DE10-Nano' }
+ *
+ * It plays muted and loops forever (browsers only allow autoplay without
+ * sound), so keep it SHORT — a few seconds of the thing actually moving. Same
+ * path rules as everything else: a file in /public, or a full https:// URL.
+ */
+export interface VideoItem {
+  /** The clip: a file in /public (e.g. 'videos/foo.mp4') or a full URL. */
+  src: string
+  /** Caption shown under the clip. Doubles as the accessible label. */
+  caption?: string
+  /** Still frame shown before the video loads. Defaults to none. */
+  poster?: string
+}
+
+/** A clip, written either as a bare URL string or as a full {@link VideoItem}. */
+export type Video = string | VideoItem
+
 export interface Project {
   name: string
   /** Label shown on the orbiting bubble in the 3D world. Defaults to `name`. */
@@ -190,6 +232,11 @@ export interface Project {
    * the thumbnail shown on the card. Clicking any thumbnail opens the gallery.
    */
   images?: Media[]
+  /**
+   * A short looping clip, rendered under the thumbnails on this card. Plays
+   * muted on repeat — for showing hardware actually moving. See {@link VideoItem}.
+   */
+  video?: Video
   /** Optional short glyph (letter/number/symbol) for the orbiting icon. */
   icon?: string
 }
@@ -463,7 +510,9 @@ export const content: SiteContent = {
       id: 'projects',
       label: 'Projects',
       // On the Showcase platform (same y), left-hand pedestal as you arrive.
-      position: [8, 3, 39],
+      // The three pedestals sit in a row at z = 38.25; see Honors for the reason
+      // |x| stops at 9.5.
+      position: [9.5, 3, 42],
       accentColor: ZONE_ACCENTS.projects,
       size: 4.5,
       onPlatform: true,
@@ -491,6 +540,12 @@ export const content: SiteContent = {
             //   'images/glove-v2.jpg',
             //   { src: 'images/glove-imu.jpg', caption: '9-axis IMU on the index finger' },
             // ],
+            images: [
+              { src: 'images/gloves.png',
+                caption: '9-axis IMUs integrated with winter gloves' },
+              { src: 'images/gloves-two.png',
+                caption: 'Data output test--UDP connection and wireless data transfer'},
+            ],
             links: [
               //{ label: 'Live', url: 'https://example.com' },
               //{ label: 'Code', url: 'https://github.com/yourname/project-one' },
@@ -525,6 +580,14 @@ export const content: SiteContent = {
             description:
               'Embedded Programming of DE10-nano FPGA, including PWM of servos and integration of sonar sensor.',
             tags: ['Embedded Programming', 'Field-Programmable Gate Array', 'Pulse-Width Modulation', 'Quartus Desgin Software'],
+            // Drop the clip in public/videos/ and uncomment. Autoplays muted on
+            // a loop, so keep it to a few seconds of the robot actually walking.
+            // video: { src: 'videos/spider-robot.mp4',
+            //          caption: 'Gait test — servo PWM driven from the DE10-Nano' },
+            images: [
+              { src: 'images/spider-robot.png',
+                caption: 'Spider Robot' },
+            ],
             links: [
               { label: 'Code', url: 'https://github.com/yourname/project-one' }, //gotta upload this jawn soon
             ],
@@ -535,6 +598,10 @@ export const content: SiteContent = {
             date: 'August 2024 - May 2025',
             description: ' Led development of automation solutions to improve water treatment efficiency that applied engineering principles to real-world challenges in partnership with Aqua Pennsylvania, a utility company; Co-created and taught an accredited class that developed and implemented real-world projects.',
             tags: ['Sensing Array'],
+            images: [
+              { src: 'images/aqua-project.png',
+                caption: 'Leadership team at the job site with Aqua Representative' },
+            ],
           },
           {
             name: 'Publication: Hide and Seek: A Multimodal Approach to Human Detection',
@@ -544,16 +611,13 @@ export const content: SiteContent = {
             facial recognition software with the goal of increasing accuracy in detecting occluded faces and darker skin tones. 
             Implemented a machine learning model to interpret results.  Published in the 39th Volume of the Journal of the Pennsylvania Governor\’s School for the Sciences.`,
             tags: ['Facial Recognition', 'Machine Learning/Artificial Intelligence', 'Sensing Array'],
-            // Paper + article previews work the same way — `href` makes the
-            // lightbox offer a click-through to the real thing.
-            // images: [
-            //   { src: 'images/hide-and-seek-paper.png',
-            //     caption: 'Journal of the PA Governor’s School for the Sciences, Vol. 39',
-            //     href: 'https://www.cmu.edu/news/stories/archives/2024/July/hide-and-seek-governors-school' },
-            // ],
+            images: [
+              { src: 'images/hide-and-seek-paper.png',
+                caption: 'Hide and Seek: A Multimodal Approach to Human Detection',
+                href: 'hide-and-seek-paper.pdf' },
+            ],
             links: [
-              { label: 'Publication', url: 'https://example.com' }, //need to add actual physical journal here
-              { label: 'Article Published on Carnegie Mellon University Website', url: 'https://www.cmu.edu/news/stories/archives/2024/July/hide-and-seek-governors-school' },
+              { label: 'Read the Full Publication Here', url: 'hide-and-seek-paper.pdf' },
             ],
           },
         ],
@@ -564,8 +628,8 @@ export const content: SiteContent = {
     {
       id: 'experience',
       label: 'Experience',
-      // On the Showcase platform, back-centre pedestal.
-      position: [0, 3, 48],
+      // On the Showcase platform, right-hand pedestal as you arrive.
+      position: [-9.5, 3, 42],
       accentColor: ZONE_ACCENTS.experience,
       size: 4.5,
       onPlatform: true,
@@ -585,6 +649,12 @@ export const content: SiteContent = {
             \n - Updated and redesigned MATLAB program which calculates displacement of MEMS devices in a Michelson Interferometer under the quadrature condition 
             using the signal-to-noise ratio calculated using experimental parameters from a spectrum analyzer, photodetector, and an oscilloscope.`,
             tags: [],
+            images: [
+              { src: 'images/maps.png',
+                caption: 'Logo for the Microscale Acoustic and Photonic Systems Laboratory' },
+              { src: 'images/MAPS-team.jpg',
+              caption: 'The MAPS Team'},
+            ],
             links: [
               { label: 'MAPS Website', url: 'https://sites.google.com/view/mapslab' },
             ],
@@ -598,6 +668,10 @@ export const content: SiteContent = {
             \n - Primarily assisted students by giving feedback and checking work during their 
             allotted lab times and open lab hours, 
             hosted additional online office hours for homework help, and graded homeworks and exams`,
+            images: [
+              { src: 'images/NEUCOE-logo.png',
+                caption: 'Northeastern College of Engineering Logo' },
+            ],
             tags: [],
           },
           {
@@ -609,6 +683,10 @@ export const content: SiteContent = {
             seeking assistance with said projects, and instruct new members through the creation of a set onboarding curriculum.
             \n - As Solar Array EE Lead: Researched and developed open-source deployable solar arrays for CubeSat power generation;
             investigated power budgets and researched possible circuit schematics for integrating sensing arrays.`,
+            images: [
+              { src: 'images/project-horizon.png',
+                caption: 'Project Horizon Logo (Project Horizon was the original name of NSL\'s first satellite intiative)' },
+            ],
             tags: [],
           },
         ],
@@ -665,8 +743,15 @@ export const content: SiteContent = {
     {
       id: 'honors',
       label: 'Honors',
-      // On the Showcase platform, right-hand pedestal as you arrive.
-      position: [-8, 3, 39],
+      // On the Showcase platform, centre pedestal of the row of three.
+      //
+      // All three share z = 38.25 and spread to x = +9.5 / 0 / -9.5. That's about
+      // as wide as the row can go: the platform is radius 15 centred at z = 42,
+      // so a size-4.5 pedestal has to stay within 10.5 of that centre, and at
+      // this z that caps |x| at ~9.8. The 9.5 spacing does leave the pedestals'
+      // interaction zones (size + 1) slightly overlapping, but Player.tsx picks
+      // the NEAREST island in range, so standing on one always selects it.
+      position: [0, 3, 42],
       accentColor: ZONE_ACCENTS.honors,
       size: 4.5,
       onPlatform: true,
