@@ -25,6 +25,9 @@ export interface PlainPageOptions {
 /** Links left over from a template — skipped on the plain page, and reported. */
 const PLACEHOLDER_URL = /github\.com\/yourname\b|example\.com/i
 
+/** A URL with a scheme (or protocol-relative) — anything not in /public. */
+const EXTERNAL = /^([a-z]+:)?\/\//i
+
 const blank = (s?: string) => !s?.trim()
 
 function island(content: SiteContent, id: string): Island | undefined {
@@ -87,7 +90,7 @@ interface PlainImage {
 
 /** Local files live in /public; anything with a scheme is external. */
 function localFile(url: string, o: PlainPageOptions): string | null {
-  return /^([a-z]+:)?\/\//i.test(url) ? null : path.join(o.publicDir, url.replace(/^\//, ''))
+  return EXTERNAL.test(url) ? null : path.join(o.publicDir, url.replace(/^\//, ''))
 }
 
 /** Images that can render: a `src`, plus `alt` (or a caption standing in for it). */
@@ -113,8 +116,27 @@ function sizeAttrs(img: { width?: number; height?: number }): string {
 }
 
 interface Ctx extends PlainPageOptions {
+  /** The deployed site, for the full URLs printed on paper. */
+  siteUrl: string
   /** Only the very first image on the page loads eagerly; the rest are below the fold. */
   eagerUsed: boolean
+}
+
+/** Where a content URL lives on the deployed site — what a printout should show. */
+function publicUrl(url: string, ctx: Ctx): string {
+  url = url.trim()
+  return EXTERNAL.test(url) ? url : ctx.siteUrl + url.replace(/^\//, '')
+}
+
+/**
+ * An href, plus — for a file on this site, like the résumé — `data-print-url`
+ * with its public URL, which the print stylesheet shows after the link text
+ * (an http(s) href is printed as-is).
+ */
+function hrefAttrs(url: string, ctx: Ctx): string {
+  const resolved = resolveUrl(url, ctx.base)
+  const onSite = !EXTERNAL.test(url.trim()) && !/^(mailto:|tel:)/i.test(resolved)
+  return `href="${esc(resolved)}"` + (onSite ? ` data-print-url="${esc(publicUrl(url, ctx))}"` : '')
 }
 
 function figure(img: PlainImage, ctx: Ctx): string {
@@ -137,6 +159,11 @@ function videoFigure(video: Video | undefined, ctx: Ctx): string {
   const size = posterFile ? imageSize(posterFile) : null
   const type = VIDEO_TYPES[path.extname(v.src.trim()).toLowerCase()]
   const caption = v.caption?.trim() ?? ''
+  // On paper the video is replaced by its poster and its URL (print-only).
+  const stillAlt = caption ? `Still from the video: ${caption}` : 'Still from the video'
+  const printPoster = blank(v.poster)
+    ? ''
+    : `<img class="print-only" src="${esc(resolveUrl(v.poster!, ctx.base))}" alt="${esc(stillAlt)}"${sizeAttrs(size ?? {})} />`
   // controls + no autoplay: nothing moves or makes noise until the visitor asks.
   return (
     `<figure>` +
@@ -144,6 +171,8 @@ function videoFigure(video: Video | undefined, ctx: Ctx): string {
     `${caption ? ` aria-label="${esc(caption)}"` : ''}>` +
     `<source src="${esc(src)}"${type ? ` type="${type}"` : ''} />` +
     `<a href="${esc(src)}">Download the video</a></video>` +
+    printPoster +
+    `<p class="print-only">Video: ${esc(publicUrl(v.src, ctx))}</p>` +
     (caption ? `<figcaption>${esc(caption)}</figcaption>` : '') +
     `</figure>\n`
   )
@@ -154,10 +183,10 @@ function videoFigure(video: Video | undefined, ctx: Ctx): string {
 const realLinks = (links?: LinkItem[]) =>
   (links ?? []).filter((l) => !blank(l.url) && !blank(l.label) && !PLACEHOLDER_URL.test(l.url))
 
-function linkList(links: LinkItem[] | undefined, o: PlainPageOptions): string {
+function linkList(links: LinkItem[] | undefined, ctx: Ctx): string {
   const list = realLinks(links)
   if (!list.length) return ''
-  const items = list.map((l) => `<li><a href="${esc(resolveUrl(l.url, o.base))}">${esc(l.label)}</a></li>`)
+  const items = list.map((l) => `<li><a ${hrefAttrs(l.url, ctx)}>${esc(l.label)}</a></li>`)
   return `<ul class="links">${items.join('')}</ul>\n`
 }
 
@@ -231,7 +260,7 @@ function renderAbout(content: SiteContent, ctx: Ctx): string {
 
 /** The page body: intro, Projects, Experience, About, footer. */
 export function renderPlainBody(content: SiteContent, o: PlainPageOptions): string {
-  const ctx: Ctx = { ...o, eagerUsed: false }
+  const ctx: Ctx = { ...o, siteUrl: content.siteUrl, eagerUsed: false }
   const url = (u: string) => esc(resolveUrl(u, o.base))
   const projects = plainProjects(content)
   const roles = island(content, 'experience')?.content.projects ?? []
@@ -239,7 +268,7 @@ export function renderPlainBody(content: SiteContent, o: PlainPageOptions): stri
 
   return `
 <header class="intro">
-<p class="notice" id="fallback-notice" hidden>${esc(content.plainPage.fallbackNotice)}</p>
+<p class="notice screen-only" id="fallback-notice" hidden>${esc(content.plainPage.fallbackNotice)}</p>
 <script>
   // Shown only when the 3D world sent the visitor here because it couldn't start.
   if (new URLSearchParams(location.search).get('reason') === 'webgl')
@@ -251,7 +280,7 @@ export function renderPlainBody(content: SiteContent, o: PlainPageOptions): stri
 <li><a href="${url(content.contact.email)}">${esc(content.contact.email)}</a></li>
 <li><a href="${url(content.contact.github)}">GitHub</a></li>
 <li><a href="${url(content.contact.linkedin)}">LinkedIn</a></li>
-<li><a href="${url(content.resumeUrl)}">Résumé (PDF)</a></li>
+<li><a ${hrefAttrs(content.resumeUrl, ctx)}>Résumé (PDF)</a></li>
 </ul>
 <nav class="toc screen-only" aria-label="On this page">
 <a href="#projects">Projects</a>

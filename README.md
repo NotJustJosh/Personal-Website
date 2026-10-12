@@ -292,6 +292,10 @@ Plain page: 64 blank fields in src/content.ts (hidden on projects/ until written
 Links to template placeholders (`github.com/yourname/…`, `example.com`) are left off
 the plain page and called out in that list.
 
+**Printing** `projects/` (Ctrl/Cmd+P → Save as PDF) gives a clean handout: white
+paper, no navigation, each project on its own page, figures never split, link URLs
+written out after the link text, and any video replaced by its poster plus its URL.
+
 Page titles, descriptions and link-preview (Open Graph) tags for both pages live in
 `content.meta`; the plugin bakes them into the HTML. Styles are in
 [`projects/plain.css`](projects/plain.css), inlined into the page at build time.

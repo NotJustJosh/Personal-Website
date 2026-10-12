@@ -193,3 +193,113 @@ footer p {
     padding-top: 2rem;
   }
 }
+
+/* Screen-only / print-only bits (the 3D links and nav; a video's poster + URL). */
+.print-only {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Print: a clean handout. White paper, black text, no navigation, each project
+   on its own page, and every link's URL written out after it.
+   ───────────────────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    margin: 0.75in;
+  }
+
+  :root {
+    --text: #000;
+    --muted: #333;
+    --link: #000;
+    --rule: #bbb;
+    color-scheme: light;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+
+  .intro,
+  main {
+    max-width: none;
+    padding: 0;
+  }
+  .intro {
+    padding-top: 0;
+  }
+
+  .screen-only,
+  video {
+    display: none !important;
+  }
+  .print-only {
+    display: block;
+  }
+
+  a {
+    color: #000;
+    text-decoration: none;
+  }
+  /* Write out where each link goes: external hrefs as-is, files on this site
+     as their public URL (data-print-url). Image links don't need it. */
+  a[href^='http']::after {
+    content: ' (' attr(href) ')';
+  }
+  a[data-print-url]::after {
+    content: ' (' attr(data-print-url) ')';
+  }
+  a[href^='http']::after,
+  a[data-print-url]::after {
+    font-size: 0.85em;
+    color: #333;
+    word-break: break-all;
+  }
+  figure a::after {
+    content: none !important;
+  }
+
+  /* Each project on a new page. The first follows the intro on page 1, and the
+     Experience and About sections each start fresh too. */
+  .project + .project,
+  #experience,
+  #about {
+    break-before: page;
+  }
+  #experience > h2,
+  #about > h2 {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+  }
+  h2,
+  h3,
+  h4,
+  h5 {
+    break-after: avoid;
+  }
+  h3 {
+    margin-top: 0;
+  }
+  .project + .project > h3:first-child,
+  .role + .role > h3:first-child {
+    margin-top: 0;
+  }
+  .role + .role {
+    margin-top: 2rem;
+  }
+
+  figure {
+    break-inside: avoid;
+  }
+  /* Short enough that two photos and their captions share a page. */
+  img {
+    max-height: 3.25in;
+    width: auto;
+    border-radius: 0;
+    background: none;
+  }
+}
