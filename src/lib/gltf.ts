@@ -7,19 +7,21 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 //  GLTF + Draco loader, ready for you to drop in .glb models.
 // ─────────────────────────────────────────────────────────────────────────────
 //  drei's useGLTF wires up three's GLTFLoader. Passing a decoder path as the 2nd
-//  argument enables Draco-compressed meshes (smaller files). The default path
-//  below pulls the WASM decoder from Google's CDN — works out of the box online.
+//  argument enables Draco-compressed meshes (smaller files). The decoder is
+//  SELF-HOSTED in public/draco/ (copied from node_modules/three/examples/jsm/
+//  libs/draco/gltf/), so it works offline; it's only fetched if a model is
+//  actually Draco-compressed. src/lib/selfHosted.ts points drei's own default
+//  (used by plain useGLTF calls) at the same copy.
 //
-//  To SELF-HOST the decoder (full offline support / no CDN dependency):
-//    1. Copy node_modules/three/examples/jsm/libs/draco/ → public/draco/
-//    2. Change DRACO_DECODER_PATH to `${import.meta.env.BASE_URL}draco/`
+//  Meshopt-compressed models need nothing extra: drei's useGLTF enables three's
+//  MeshoptDecoder by default, and it's bundled into the JS.
 //
 //  Usage in a component:
 //    const { scene } = useModel(modelUrl('models/avatar.glb'))
 //    return <primitive object={scene} />
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/'
+const DRACO_DECODER_PATH = `${import.meta.env.BASE_URL}draco/`
 
 /** Build a base-path-aware URL for a model stored in /public. */
 export function modelUrl(path: string): string {

@@ -6,7 +6,9 @@ Reference them from src/content.ts by path, e.g.:
   images: [{ src: 'images/paper.png', caption: 'JPGSS Vol. 39' }]
 
 Tips
-  • JPG for photos, PNG for screenshots/diagrams, WebP if you can.
+  • JPG for photos, PNG for screenshots/diagrams, WebP if you can. The big
+    photos here are WebP made by scripts/compress-images.py from originals in
+    assets-src/images/ (not deployed) — see the main README.
   • ~1600px wide is plenty for the full-size gallery.
   • Optionally add a small `thumb:` (~600px) for the card + 3D previews —
     cover images are downloaded when you first walk onto that island.

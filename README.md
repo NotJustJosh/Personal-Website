@@ -49,6 +49,23 @@ npm run build    # type-checks, then writes static files to ./dist
 npm run preview  # serve ./dist locally to sanity-check the build
 ```
 
+### Offline (a demo laptop with no Wi-Fi)
+
+The production build makes **no requests to any other site**: three.js and every
+library are bundled, and the label font, cloud texture and Draco decoder are served
+from this site ([`src/lib/selfHosted.ts`](src/lib/selfHosted.ts)). One command builds it
+and serves it locally:
+
+```bash
+npm run serve    # build, then serve ./dist at http://localhost:4173/Personal-Website/
+```
+
+Open **http://localhost:4173/Personal-Website/** (the 3D world) or
+**http://localhost:4173/Personal-Website/projects/** (the plain page). Localhost doesn't
+need a network, so this works with Wi-Fi off — run it once while you're still online if
+`node_modules` isn't installed yet. Opening `dist/index.html` straight from disk
+(`file://`) does **not** work: browsers block module scripts and model loading there.
+
 ---
 
 ## ✦ The most important file: `src/content.ts`
@@ -219,6 +236,42 @@ Notes:
   page load — so keep them modest (~800px) or supply a small `thumb`.
 - Preview size in the 3D world: `ORBIT.PREVIEW_*` in [`src/config.ts`](src/config.ts).
 
+### Photos: originals vs. what ships
+
+The big photos are served as WebP. Their originals live in `assets-src/images/` (kept in
+the repo, never deployed); [`scripts/compress-images.py`](scripts/compress-images.py)
+re-encodes them into `public/images/` at the same resolution:
+
+```bash
+python scripts/compress-images.py              # all of them (needs: pip install pillow)
+python scripts/compress-images.py gloves.png   # just one
+```
+
+To add a new photo, drop the original in `assets-src/images/`, add its name to `PHOTOS`
+in the script, run it, and point `content.ts` at the `.webp`.
+
+### Add a video (phone clip → web)
+
+Compress a phone clip to 720p H.264 with `faststart` (so it starts playing before it's
+fully downloaded), then grab a poster frame:
+
+```bash
+# Shorter side 720 px, whichever way the phone was held. Add -an to drop the audio.
+ffmpeg -i clip.mov -vf "scale='if(gt(iw,ih),-2,720)':'if(gt(iw,ih),720,-2)'" -c:v libx264 -preset slow -crf 23 -profile:v high -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart public/videos/gloves-demo.mp4
+
+# Poster: the frame 2 seconds in.
+ffmpeg -ss 2 -i public/videos/gloves-demo.mp4 -frames:v 1 -q:v 3 public/images/gloves-demo-poster.jpg
+```
+
+```ts
+video: { src: 'videos/gloves-demo.mp4', poster: 'images/gloves-demo-poster.jpg',
+         caption: '…' },
+```
+
+The file is self-hosted, so it plays offline. On the plain page it gets controls and
+never autoplays (`playsinline`, `preload="metadata"`, the poster until you press play);
+in the 3D card it keeps its muted loop.
+
 ### Remove an island
 Delete its entry **and** remove its id from any other island's `neighbors`.
 
@@ -327,9 +380,10 @@ both read it.
 - **Island set dressing:** set `model: 'models/your-thing.glb'` on an island in
   `content.ts`. It loads in place of the placeholder crystal.
 
-Draco compression is already configured in [`src/lib/gltf.ts`](src/lib/gltf.ts). To
-self-host the decoder (no CDN), copy `node_modules/three/examples/jsm/libs/draco/` into
-`public/draco/` and point `DRACO_DECODER_PATH` at `` `${import.meta.env.BASE_URL}draco/` ``.
+Draco compression is already configured in [`src/lib/gltf.ts`](src/lib/gltf.ts), with the
+decoder self-hosted in `public/draco/` (copied from
+`node_modules/three/examples/jsm/libs/draco/gltf/`). Meshopt-compressed models also work
+offline with no setup — drei bundles the decoder.
 
 ---
 

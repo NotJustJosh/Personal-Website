@@ -697,9 +697,9 @@ export const content: SiteContent = {
             //   { src: 'images/glove-imu.jpg', caption: '9-axis IMU on the index finger' },
             // ],
             images: [
-              { src: 'images/gloves.png', alt: '',
+              { src: 'images/gloves.webp', alt: '',
                 caption: '9-axis IMUs integrated with winter gloves' },
-              { src: 'images/gloves-two.png', alt: '',
+              { src: 'images/gloves-two.webp', alt: '',
                 caption: 'Data output test--UDP connection and wireless data transfer'},
             ],
             links: [
@@ -762,7 +762,7 @@ export const content: SiteContent = {
             // video: { src: 'videos/spider-robot.mp4',
             //          caption: 'Gait test — servo PWM driven from the DE10-Nano' },
             images: [
-              { src: 'images/spider-robot.png', alt: '',
+              { src: 'images/spider-robot.webp', alt: '',
                 caption: 'Spider Robot' },
             ],
             links: [
@@ -777,7 +777,7 @@ export const content: SiteContent = {
             description: ' Led development of automation solutions to improve water treatment efficiency that applied engineering principles to real-world challenges in partnership with Aqua Pennsylvania, a utility company; Co-created and taught an accredited class that developed and implemented real-world projects.',
             tags: ['Sensing Array'],
             images: [
-              { src: 'images/aqua-project.png', alt: '',
+              { src: 'images/aqua-project.webp', alt: '',
                 caption: 'Leadership team at the job site with Aqua Representative' },
             ],
           },

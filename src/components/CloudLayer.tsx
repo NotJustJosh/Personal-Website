@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Clouds, Cloud } from '@react-three/drei'
+import { asset } from '../lib/paths'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  A dense fog/cloud sea just beneath the islands. It sits close up — its top
@@ -11,6 +12,11 @@ import { Clouds, Cloud } from '@react-three/drei'
 // Matches the scene fog color (World.tsx) so the backstop blends into the haze.
 const FOG_BASE = '#0a1024'
 
+// drei's own cloud sprite, self-hosted (it defaults to a githack CDN URL): the
+// same file, from the same drei-assets commit, so the clouds look identical and
+// load offline.
+const CLOUD_TEXTURE = asset('textures/cloud.png')
+
 export function CloudLayer() {
   return (
     <group>
@@ -21,7 +27,7 @@ export function CloudLayer() {
       </mesh>
 
       {/* Dense cloud sea well below the islands (top ≈ y -17). */}
-      <Clouds material={THREE.MeshBasicMaterial} limit={500} frustumCulled={false}>
+      <Clouds material={THREE.MeshBasicMaterial} texture={CLOUD_TEXTURE} limit={500} frustumCulled={false}>
         <Cloud
           seed={1}
           position={[0, -22, 0]}
