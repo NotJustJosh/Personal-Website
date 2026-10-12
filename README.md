@@ -3,10 +3,9 @@
 An explorable, single-player **open-world style** personal site: a world of **floating
 islands in a soft pale void**, connected by light-bridges. Walk a character across the
 islands, step onto one, and press **E** to open a clean HTML panel with that section's
-content. The entire world is **data-driven from one file** (`src/content.ts`). Phones
-automatically get a clean, scrollable 2D **Classic view** with a nav menu; browsers that
-can't run the 3D scene go to a fast **plain page** (`projects/`) instead. It builds to
-static files and deploys to **GitHub Pages**.
+content. The entire world is **data-driven from one file** (`src/content.ts`). Phones,
+and browsers that can't run the 3D scene, get a fast **plain page** (`projects/`) built
+from the same file. It builds to static files and deploys to **GitHub Pages**.
 
 > No backend, no multiplayer, no networking — it all builds to static files.
 
@@ -95,8 +94,7 @@ entry automatically:
 - adds it to the **fast-travel menu**,
 - makes it a valid **fall-respawn** target,
 - generates **light-bridges** to the ids in its `neighbors`,
-- wires its **interaction zone + content panel**,
-- adds it to the **Classic view** page and its **nav menu**.
+- wires its **interaction zone + content panel**.
 
 ### Add an island
 
@@ -149,14 +147,13 @@ content: {
 - `image` is ONE picture shown at its natural aspect, centred and never cropped
   (a tall portrait just gets narrower rather than losing its head).
 - `keys` draws key caps — use it for the controls tutorial.
-- `only: '3d'` hides a slide in Classic view (`only: 'classic'` does the reverse). The
-  walk-around tutorial is marked `'3d'`, so 2D visitors never see it.
+- `only: '3d'` keeps a slide off the plain page (`only: 'plain'` does the reverse). The
+  walk-around tutorial is marked `'3d'`, so plain-page visitors never see it.
 - Slides **replace** the island's `body` + `images`; `groups`, `projects` and `links`
   still render underneath.
 - The last slide's button closes the panel and drops you into the world.
 - In the 3D panel the island's own heading only shows on slide 1 — after that
-  each slide carries its own title. Classic view keeps its `<h2>` on every
-  section, since the nav links anchor to it.
+  each slide carries its own title.
 
 ### Copy-to-clipboard links
 
@@ -170,7 +167,7 @@ links: [
 ]
 ```
 
-Works in the 3D panel and the Classic view. Falls back to a hidden-textarea copy if
+Works anywhere in the 3D panels. Falls back to a hidden-textarea copy if
 the browser blocks the async Clipboard API.
 
 ### Formatting prose (descriptions + body text)
@@ -214,8 +211,7 @@ content: {
 }
 ```
 
-Groups render between the island's body text and its project cards, in both the 3D panel
-and the Classic view.
+Groups render between the island's body text and its project cards in the 3D panel.
 
 ### Add images (projects, papers, articles, anything)
 
@@ -240,8 +236,8 @@ That one array gives you, with no other changes:
 
 - a **small framed preview** of the first image floating above that project's orbiting
   icon out in the 3D world (island view),
-- a **thumbnail strip** on the project card in **both** the 3D panel and the Classic 2D
-  view,
+- a **thumbnail strip** on the project card in the 3D panel (the plain page shows each
+  image large, with its caption),
 - a **full-size gallery** when you click any thumbnail — `←`/`→` to page through,
   captions, an optional link out, `Esc` to close.
 
@@ -308,8 +304,12 @@ It shows Projects, Experience and About:
   exist **only** on this page (the lab and ROV entries) — putting them on an island
   would add orbiting items to the 3D world.
 - **Experience**: the Experience island's entries (title, date, `summary`, description).
-- **About**: the About island's slides (minus `only: '3d'` and `plainPage: false`
-  slides), the Honors list, and the Resources island's download links.
+- **About**: the About island's slides (minus `only: '3d'` ones), the Honors list, and
+  the Resources island's download links. The intro shows the hero slide's portrait (its
+  small `thumb`) and the site `tagline`; projects show their tags as a line of text.
+
+Phones are sent here automatically, before the 3D bundle downloads. The page's
+"3D world" links add `?view=3d`, which lets a phone into the 3D world anyway.
 
 Every project has an `id`, which is its anchor — link straight to one with
 `projects/#gloves`.
@@ -423,8 +423,8 @@ src/
   content.ts            ← EDIT THIS: the islands array = the whole world
   config.ts             ← world border, respawn Y, gravity, island dimensions
   store.ts              ← shared UI/teleport/fade state (zustand)
-  main.tsx              ← entry: WebGL 2 check, then loads start.tsx (the app)
-  App.tsx               ← 3D world vs Classic view; DOM UI layout
+  main.tsx              ← entry: WebGL 2 + phone checks, then loads start.tsx (the app)
+  App.tsx               ← the 3D world + its DOM UI layout
   scene/
     World.tsx           ← the <Canvas> + pale-void background/fog
     Experience.tsx      ← islands + bridges + border + lights + player + camera
@@ -439,8 +439,8 @@ src/
     Avatar.tsx          ← example .glb avatar (not used by default)
   ui/                   ← plain HTML/DOM over the canvas
     LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI, SkipLink,
-    FastTravelMenu, FadeOverlay, InputManager, ClassicView
-    ProjectCard.tsx     ← one project card, shared by Panel + ClassicView
+    FastTravelMenu, FadeOverlay, InputManager
+    ProjectCard.tsx     ← one project card in a Panel
     Gallery.tsx         ← image thumbnails + the full-size lightbox
     ContentGroups.tsx   ← nested sub-sections (`groups`) inside an island
     RichText.tsx        ← "- " bullets / blank-line paragraphs in prose
@@ -453,7 +453,7 @@ src/
     prose.ts            ← "- " bullets / paragraphs rules (shared with the plain page)
     clipboard.ts        ← clipboard copy with a legacy fallback
     media.ts            ← normalizes content.ts `images` entries into real URLs
-    device.ts           ← WebGL + mobile detection
+    device.ts           ← phone detection (phones get the plain page)
     fallback.ts         ← the way out to the plain page (+ ?nowebgl=1)
     boot.ts             ← drives the static loading screen in index.html
     gltf.ts             ← GLTF loader with Draco support
@@ -502,8 +502,9 @@ workflow's `deploy` job and under Settings → Pages.
 
 ## Notes
 
-- **Mobile/low-end:** phones get the Classic view automatically
-  ([`lib/device.ts`](src/lib/device.ts)); desktop users can toggle any time.
+- **Mobile:** phones get the plain page automatically
+  ([`lib/device.ts`](src/lib/device.ts)); the 3D world is built for keyboard + mouse.
+  Slower desktops can use **Reduce graphics** (top-right).
 - The build prints a chunk-size warning — that's Three.js + Rapier's WASM (~1.2 MB
   gzipped), normal for a 3D app, not an error.
 - This is an MVP foundation. Obvious next steps: a real `.glb` avatar with walk

@@ -4,8 +4,7 @@ import { RichText } from './RichText'
 import { ContentLink } from './ContentLink'
 
 // Nested sub-sections inside an island — each one a headed block with its own
-// prose, image gallery and buttons. Shared by the 3D panel and the Classic 2D
-// view so both render identically.
+// prose, image gallery and buttons. Used by the 3D panel.
 //
 // Renders nothing when an island has no `groups`, so callers can drop it in
 // unconditionally.

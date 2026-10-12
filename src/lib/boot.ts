@@ -11,15 +11,6 @@ const FADE_MS = 700
 
 const boot = () => document.getElementById('boot')
 
-/** Show it again (e.g. entering the 3D world from Classic view). */
-export function showBoot() {
-  const el = boot()
-  if (!el) return
-  el.hidden = false
-  el.classList.remove('boot--done')
-  el.removeAttribute('aria-hidden')
-}
-
 export function setBootProgress(percent: number) {
   const el = boot()
   if (!el) return
@@ -42,10 +33,4 @@ export function finishBoot(): () => void {
   el.setAttribute('aria-hidden', 'true')
   const t = setTimeout(() => (el.hidden = true), FADE_MS)
   return () => clearTimeout(t)
-}
-
-/** Hide immediately (Classic view has no loading phase). */
-export function hideBoot() {
-  const el = boot()
-  if (el) el.hidden = true
 }

@@ -196,6 +196,24 @@ function field(heading: string, text: string | undefined): string {
   return blank(text) ? '' : `<h4>${heading}</h4>\n${prose(text)}`
 }
 
+/** A project's tags as one quiet line — the 3D cards show them as chips. */
+function tagLine(p: Project): string {
+  const tags = (p.tags ?? []).map((t) => t.trim()).filter(Boolean)
+  return tags.length ? `<p class="tags">${tags.map(esc).join(' · ')}</p>` : ''
+}
+
+/** The intro's portrait: the About deck's hero image, using its small `thumb`. */
+function portrait(content: SiteContent, o: PlainPageOptions): string {
+  const hero = island(content, 'about')?.content.slides?.find((s) => s.hero && s.image)
+  if (!hero?.image) return ''
+  const img = typeof hero.image === 'string' ? { src: hero.image } : hero.image
+  const src = (blank(img.thumb) ? img.src : img.thumb!).trim()
+  if (blank(src) || blank(img.alt)) return ''
+  const file = localFile(src, o)
+  const size = file ? imageSize(file) : null
+  return `<img class="portrait" src="${esc(resolveUrl(src, o.base))}" alt="${esc(img.alt!.trim())}"${sizeAttrs(size ?? {})} />`
+}
+
 function renderProject(p: Project, ctx: Ctx): string {
   const decisions = (p.decisions ?? []).filter((d) => !blank(d.question) && !blank(d.answer))
   const evidence = plainImages(p.images, ctx).map((img) => figure(img, ctx)).join('') + videoFigure(p.video, ctx)
@@ -204,6 +222,7 @@ function renderProject(p: Project, ctx: Ctx): string {
     `<article class="project" id="${esc(anchorOf(p))}">`,
     `<h3>${lines(p.name)}</h3>`,
     blank(p.date) ? '' : `<p class="date">${esc(p.date!.trim())}</p>`,
+    tagLine(p),
     blank(p.summary) ? '' : `<p class="summary">${esc(p.summary!.trim())}</p>`,
     prose(p.description),
     field('Problem', p.problem),
@@ -227,6 +246,7 @@ function renderRole(p: Project, ctx: Ctx): string {
     `<article class="role" id="${esc(anchorOf(p))}">`,
     `<h3>${lines(p.name)}</h3>`,
     blank(p.date) ? '' : `<p class="date">${esc(p.date!.trim())}</p>`,
+    tagLine(p),
     blank(p.summary) ? '' : `<p class="summary">${esc(p.summary!.trim())}</p>`,
     prose(p.description),
     linkList(p.links, ctx),
@@ -238,7 +258,7 @@ function renderRole(p: Project, ctx: Ctx): string {
 
 function renderAbout(content: SiteContent, ctx: Ctx): string {
   const slides = (island(content, 'about')?.content.slides ?? []).filter(
-    (s) => s.only !== '3d' && s.plainPage !== false && !blank(s.title),
+    (s) => s.only !== '3d' && !blank(s.title),
   )
   const honors = island(content, 'honors')?.content.projects ?? []
   const docs = (island(content, 'resources')?.content.groups ?? []).flatMap((g) => realLinks(g.links))
@@ -264,7 +284,8 @@ export function renderPlainBody(content: SiteContent, o: PlainPageOptions): stri
   const url = (u: string) => esc(resolveUrl(u, o.base))
   const projects = plainProjects(content)
   const roles = island(content, 'experience')?.content.projects ?? []
-  const home = esc(o.base)
+  // ?view=3d: phones are otherwise sent straight back here (see src/main.tsx).
+  const home = esc(`${o.base}?view=3d`)
 
   return `
 <header class="intro">
@@ -274,8 +295,14 @@ export function renderPlainBody(content: SiteContent, o: PlainPageOptions): stri
   if (new URLSearchParams(location.search).get('reason') === 'webgl')
     document.getElementById('fallback-notice').hidden = false
 </script>
+<div class="intro__head">
+<div>
 <h1>${esc(content.fullName)}</h1>
 <p class="lede">${esc(content.oneLiner)}</p>
+${blank(content.tagline) ? '' : `<p class="tagline">${esc(content.tagline)}</p>`}
+</div>
+${portrait(content, o)}
+</div>
 <ul class="contact">
 <li><a href="${url(content.contact.email)}">${esc(content.contact.email)}</a></li>
 <li><a href="${url(content.contact.github)}">GitHub</a></li>

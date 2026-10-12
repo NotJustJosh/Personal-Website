@@ -1,15 +1,5 @@
-import WebGL from 'three/addons/capabilities/WebGL.js'
-import { forcedNoWebGL } from './fallback'
-
-// Capability detection used to decide between the 3D world and the Classic view.
-
-/**
- * Returns true if the browser can run the 3D world. three.js needs WebGL 2,
- * so this is three's own check for it (the same one main.tsx runs first).
- */
-export function isWebGLAvailable(): boolean {
-  return !forcedNoWebGL() && WebGL.isWebGL2Available()
-}
+// Device detection: phones get the plain page instead of the 3D world, which
+// is built for a keyboard and mouse. (The WebGL check lives in main.tsx.)
 
 /** Best-effort "is this a phone/tablet" check. */
 export function isLikelyMobile(): boolean {
@@ -23,12 +13,4 @@ export function isLikelyMobile(): boolean {
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false
   const smallScreen = Math.min(window.screen.width, window.screen.height) < 768
   return mobileUA || (coarsePointer && smallScreen)
-}
-
-/**
- * Decide whether to show the Classic (2D) view instead of the 3D world.
- * True when WebGL is missing OR the device looks like a phone/tablet.
- */
-export function shouldUseClassicView(): boolean {
-  return !isWebGLAvailable() || isLikelyMobile()
 }

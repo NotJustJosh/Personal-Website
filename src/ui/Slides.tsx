@@ -17,7 +17,6 @@ import { ContentLink } from './ContentLink'
 
 export function Slides({
   slides: all,
-  view,
   /** Called by the "Done" button on the last slide — the panel passes onClose. */
   onDone,
   /** Fires whenever the visible slide changes — the panel hides its own heading
@@ -25,16 +24,13 @@ export function Slides({
   onIndexChange,
 }: {
   slides: Slide[]
-  /** Which view we're in, so `only: '3d'` / `only: 'classic'` slides can be dropped. */
-  view: '3d' | 'classic'
   onDone?: () => void
   onIndexChange?: (index: number) => void
 }) {
   const [index, setIndex] = useState(0)
 
-  // Drop slides that don't belong in this view (e.g. the walk-around tutorial
-  // is meaningless in Classic view).
-  const slides = useMemo(() => all.filter((s) => !s.only || s.only === view), [all, view])
+  // Drop slides meant only for the plain page (projects/).
+  const slides = useMemo(() => all.filter((s) => s.only !== 'plain'), [all])
 
   // Snap back to the first slide whenever the deck itself changes (new island).
   useEffect(() => {

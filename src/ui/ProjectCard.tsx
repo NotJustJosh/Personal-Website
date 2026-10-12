@@ -8,9 +8,8 @@ import { GalleryGrid, Lightbox } from './Gallery'
 import { VideoClip } from './VideoClip'
 import { ContentLink } from './ContentLink'
 
-// One project/honor/experience card. Shared by the 3D panel (Panel.tsx) and the
-// Classic 2D view (ClassicView.tsx) so both stay in sync — including the image
-// gallery, which is why this was pulled out of the two near-identical copies.
+// One project/honor/experience card in the 3D panel (Panel.tsx), including its
+// image gallery and video clip.
 //
 // Images are split: the FIRST one sits in a small box beside the title (it's the
 // cover — the same image that floats over this item in the 3D world), and the

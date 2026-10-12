@@ -9,7 +9,8 @@
 //    • makes it a valid fall-respawn target,
 //    • generates light-bridges to the ids listed in its `neighbors`,
 //    • wires its interaction zone + content panel,
-//    • adds it to the Classic-view page + its nav menu.
+//    • (projects / experience / about / honors / resources also feed the
+//      plain page at projects/ — see `plainPage` at the bottom).
 //
 //  ─── HOW TO ADD A NEW ISLAND ───────────────────────────────────────────────
 //  Append an object to `islands`:
@@ -86,8 +87,9 @@
 //  Title and subtitle always render ABOVE the image. `hero: true` makes the
 //  title extra-large + full-width — use it on the opening slide.
 //  Navigate with the on-screen arrows, the dots, or the ← / → keys.
-//  `only: '3d'` hides a slide in Classic view (and `only: 'classic'` vice
-//  versa) — use it for the walk-around tutorial, which means nothing in 2D.
+//  `only: '3d'` keeps a slide out of the plain page (projects/), which shows
+//  the deck as headed paragraphs — use it for the walk-around tutorial, which
+//  means nothing in 2D. `only: 'plain'` does the reverse.
 //  Slides REPLACE the island's `body` + `images`; `groups`, `projects` and
 //  `links` still render underneath.
 //
@@ -117,9 +119,9 @@
 //  What you get for free:
 //    • the FIRST image floats as a small framed preview above that project's
 //      orbiting icon in the 3D world (island view),
-//    • a thumbnail strip on the project card in BOTH the 3D panel and the
-//      Classic 2D view; clicking any thumbnail opens a full-size gallery with
-//      ←/→ arrows, captions, and Esc to close,
+//    • a thumbnail strip on the project card in the 3D panel; clicking any
+//      thumbnail opens a full-size gallery with ←/→ arrows, captions, and Esc
+//      to close (the plain page shows them large, one per figure),
 //    • island-level `content.images` for photos that aren't tied to one project.
 //
 //  Keep previews small (~800px wide, compressed) — every cover image is fetched
@@ -324,17 +326,12 @@ export interface Slide {
   /** Buttons at the bottom of the slide. */
   links?: LinkItem[]
   /**
-   * Limit this slide to one view. Tutorial slides about walking around only
-   * make sense in the 3D world, so mark those `only: '3d'`.
-   * Omit to show the slide in both views.
+   * Limit this slide to one view: the 3D world's panel, or the plain page
+   * (projects/), which shows the deck as ordinary headed paragraphs. Tutorial
+   * slides about walking around only make sense in 3D, so mark those
+   * `only: '3d'`. Omit to show the slide in both.
    */
-  only?: '3d' | 'classic'
-  /**
-   * Set false to leave this slide off the plain page (projects/), which shows
-   * the About deck as ordinary headed paragraphs. `only: '3d'` slides are
-   * always left off.
-   */
-  plainPage?: boolean
+  only?: '3d' | 'plain'
 }
 
 /**
@@ -363,7 +360,7 @@ export interface ContentGroup {
   links?: LinkItem[]
 }
 
-/** Content shown in an island's panel (3D) and its Classic-view section (2D). */
+/** Content shown in an island's panel in the 3D world. */
 export interface PanelContent {
   title: string
   body?: string[]
@@ -407,14 +404,14 @@ export interface Island {
   /**
    * Scenery that HOLDS other islands. It renders ground, a collider and its
    * accent light, but no pedestal and no panel, and it's kept out of the
-   * fast-travel menu and the Classic view. Use it to put several sections on
+   * fast-travel menu. Use it to put several sections on
    * one landmass — see the "Showcase" island below.
    */
   platform?: boolean
   /**
    * This island SITS ON a platform: no ground or collider of its own (the
    * platform provides both), but it keeps its pedestal, label, orbiting items,
-   * panel, fast-travel entry and Classic-view section.
+   * panel and fast-travel entry.
    *
    * Give it the SAME `y` as its platform, and a `size` small enough that the
    * interaction zones of the pedestals sharing the platform don't overlap.
@@ -507,7 +504,7 @@ export interface SiteContent {
   siteUrl: string
   /** Page titles, descriptions and link-preview tags. */
   meta: SiteMeta
-  /** Short tagline shown under your name (Classic view + loading). */
+  /** Short tagline shown under your name on the plain page. */
   tagline: string
   /** One plain sentence under your name on the loading screen and the plain page. */
   oneLiner: string
@@ -580,14 +577,16 @@ export const content: SiteContent = {
         // ── The intro deck ───────────────────────────────────────────────────
         // Click-through slides instead of a wall of text. Keep each one SHORT.
         // Add `image: 'images/foo.jpg'` to any slide for a picture up top; add
-        // `only: '3d'` to hide a slide from the Classic 2D view.
+        // `only: '3d'` to keep a slide off the plain page.
         slides: [
           {
             hero: true,
-            // The plain page opens with your name already.
-            plainPage: false,
+            // The plain page opens with your name + this portrait already.
+            only: '3d',
             title: "Hi, I\'m Josh Yuen",
-            image: 'images/portrait.jpg',
+            // `thumb` is the small copy the plain page's intro shows; the
+            // slide itself uses the full-size `src`.
+            image: { src: 'images/portrait.jpg', thumb: 'images/portrait-thumb.webp', alt: 'Joshua Yuen' },
             subtitle: `Electrical Engineering and Physics Student · 
             Photonic Systems & Optical Computing Researcher · 
             Interdisciplinary Systems Advocate`,
@@ -621,7 +620,7 @@ export const content: SiteContent = {
           {
             title: 'Have a look around',
             // Talks about the 3D world's menu, so it's left off the plain page.
-            plainPage: false,
+            only: '3d',
             // image: 'images/world-overview.jpg',
             body: [
               `Feel free to take a look around my virtual world 
@@ -646,7 +645,7 @@ export const content: SiteContent = {
     // ── Showcase platform ────────────────────────────────────────────────────
     // Pure scenery: one big landmass that carries the Projects, Experience and
     // Honors pedestals (`platform: true` → no pedestal, no panel, hidden from
-    // the fast-travel menu and Classic view). The bridges to/from this whole
+    // the fast-travel menu). The bridges to/from this whole
     // area hang off THIS entry, not off the three sections standing on it.
     {
       id: 'showcase',

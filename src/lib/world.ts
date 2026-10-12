@@ -11,7 +11,7 @@ export const ISLANDS = content.islands
 
 /**
  * Islands with their own section/panel — i.e. everything except scenery
- * platforms. This is what the fast-travel menu and Classic view list.
+ * platforms. This is what the fast-travel menu lists.
  */
 export const CONTENT_ISLANDS = ISLANDS.filter((i) => !i.platform)
 

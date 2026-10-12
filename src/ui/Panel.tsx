@@ -17,8 +17,7 @@ const CATEGORY_ORDER: TagCategory[] = ['field', 'tool', 'method', 'general']
 //
 // `focusKey` scrolls that entry into view and highlights it in the island accent.
 // Tags are color-coded by category and clickable to filter the project list.
-// Cards (incl. their image galleries) come from the shared ProjectCard, so the
-// Classic 2D view renders exactly the same thing.
+// Cards (incl. their image galleries) come from the shared ProjectCard.
 export function Panel({
   data,
   focusKey,
@@ -87,7 +86,7 @@ export function Panel({
 
         {/* A slideshow REPLACES the body text + island gallery when present. */}
         {data.slides?.length ? (
-          <Slides slides={data.slides} view="3d" onDone={onClose} onIndexChange={setSlideIndex} />
+          <Slides slides={data.slides} onDone={onClose} onIndexChange={setSlideIndex} />
         ) : (
           <>
             {data.body?.map((paragraph, i) => (

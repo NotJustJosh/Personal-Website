@@ -7,8 +7,8 @@ import type { ResolvedImage } from '../lib/media'
 // ─────────────────────────────────────────────────────────────────────────────
 //  Image gallery — a thumbnail strip that opens a full-size lightbox.
 //
-//  Shared by the 3D panel (Panel.tsx) and the Classic 2D view (ClassicView.tsx)
-//  via ProjectCard, so a project's images look and behave the same in both.
+//  Used by the 3D panel (Panel.tsx), both directly (island galleries) and via
+//  ProjectCard.
 //
 //  The lightbox is portalled to <body> so it sits ABOVE the panel backdrop and
 //  its clicks never bubble into the panel (which would close it). Its key

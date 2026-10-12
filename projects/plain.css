@@ -110,10 +110,37 @@ a:focus-visible {
   background: rgba(91, 140, 255, 0.12);
 }
 
+/* Name + lines on the left, a small portrait on the right. */
+.intro__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.portrait {
+  flex: none;
+  width: 7.5rem;
+  height: auto;
+  border-radius: 10px;
+}
+
 .lede {
-  margin-bottom: 1rem;
+  margin-bottom: 0.4rem;
   color: var(--muted);
   font-size: 1.15rem;
+}
+
+.tagline {
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.tags {
+  margin: -0.5rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .summary {
@@ -191,6 +218,9 @@ footer p {
   }
   .intro {
     padding-top: 2rem;
+  }
+  .portrait {
+    width: 5rem;
   }
 }
 
@@ -296,6 +326,10 @@ footer p {
     break-inside: avoid;
   }
   /* Short enough that two photos and their captions share a page. */
+  .portrait {
+    width: 1in;
+  }
+
   img {
     max-height: 3.25in;
     width: auto;

@@ -74,6 +74,10 @@ const gloves = plain.match(/<article class="project" id="gloves">[\s\S]*?<\/arti
 check('gloves: blank Problem / Results / Rev 2 are not rendered', !/<h4>(Problem|Results|Rev 2|The hard part)<\/h4>/.test(gloves))
 check('gloves: unanswered design questions are not rendered', !gloves.includes('Why I2C rather than SPI?') && !gloves.includes('<h5>'))
 check('gloves: filled-in scope is rendered', gloves.includes('<h4>My scope</h4>'))
+check('gloves: tags shown as a line of text', /<p class="tags">[^<]*Wearable Technology/.test(gloves))
+check('intro has the portrait (small copy, sized, with alt)', /<img class="portrait" src="[^"]*portrait-thumb\.webp" alt="[^"]+" width="\d+" height="\d+"/.test(plain))
+check('intro has the tagline', /<p class="tagline">[^<]+<\/p>/.test(plain))
+check('"3D world" links carry ?view=3d, so phones are not bounced back',/href="[^"]*\?view=3d">3D world</.test(plain))
 
 // ── 3. In the browser, offline ───────────────────────────────────────────────
 const server = await preview({ root: ROOT, logLevel: 'silent', preview: { port: PORT, strictPort: true } })
@@ -147,6 +151,7 @@ section('3D world (offline)')
   }
   await page.screenshot({ path: path.join(OUT, '3d-offline-after-travel.png') })
   check('canvas keeps touch-action: none', (await page.$eval('canvas', (c) => getComputedStyle(c).touchAction)) === 'none')
+  check('no Classic view button any more', (await page.locator('text=Classic view').count()) === 0)
 
   await page.evaluate(() => document.querySelector('canvas').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext())
   check('losing the WebGL context surfaces a notice by the skip link', await page.waitForSelector('.skip__notice', { timeout: 5000 }).then(() => true, () => false))
@@ -264,10 +269,18 @@ section('Phone (Pixel 7 emulation)')
   const zoom = await spread(page, 200, 350)
   check('plain page: pinch-zoom works', zoom > 1.2, `scale ${zoom.toFixed(2)}`)
 
+  const requests = []
+  page.on('request', (r) => requests.push(r.url()))
   await page.goto(BASE)
-  await page.waitForSelector('.classic', { timeout: 30000 })
-  check('phones still get the Classic view, loading screen cleared', await page.isHidden('#boot'))
-  await page.click('text=Enter 3D world')
+  await page.waitForURL(/projects\/$/, { timeout: 15000 }).catch(() => {})
+  check('phones are sent to the plain page', page.url() === BASE + 'projects/', page.url())
+  check('…without downloading the 3D bundle', !requests.some((u) => /\/assets\/start-[^/]*\.js$/.test(u)))
+  check('…and without the fallback notice',await page.isHidden('#fallback-notice'))
+
+  // The plain page's "3D world" link (?view=3d) still gets a phone in.
+  await page.click('nav.toc >> text=3D world')
+  await page.waitForSelector('canvas', { timeout: 30000 })
+  check('phone + ?view=3d opens the 3D world', page.url().endsWith('?view=3d'), page.url())
   await page.waitForSelector('#boot', { state: 'hidden', timeout: 60000 })
   await page.keyboard.press('Escape')
   const box = await page.$eval('canvas', (c) => {

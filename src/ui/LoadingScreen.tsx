@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useProgress } from '@react-three/drei'
 import { useGame } from '../store'
-import { finishBoot, setBootProgress, showBoot } from '../lib/boot'
+import { finishBoot, setBootProgress } from '../lib/boot'
 
 // Drives the loading screen. Its markup is static HTML in index.html (#boot —
 // name, links, "Skip to projects", progress bar), so it's readable before any
@@ -11,9 +11,6 @@ import { finishBoot, setBootProgress, showBoot } from '../lib/boot'
 export function LoadingScreen() {
   const ready = useGame((s) => s.ready)
   const { progress } = useProgress()
-
-  // Arriving from Classic view hid it; show it again while the world loads.
-  useEffect(() => showBoot(), [])
 
   useEffect(() => {
     setBootProgress(ready ? 100 : Math.max(Math.round(progress), 6))
