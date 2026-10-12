@@ -66,6 +66,23 @@ need a network, so this works with Wi-Fi off — run it once while you're still 
 `node_modules` isn't installed yet. Opening `dist/index.html` straight from disk
 (`file://`) does **not** work: browsers block module scripts and model loading there.
 
+### Smoke tests
+
+```bash
+npm run smoke
+```
+
+[`scripts/smoke.mjs`](scripts/smoke.mjs) builds the site, serves `dist/`, and drives the
+Chrome already installed on this machine (via `playwright-core`; no browser download —
+`SMOKE_BROWSER=msedge npm run smoke` uses Edge). The browser can't resolve any hostname
+but `localhost`, so the run is offline and any request to another site fails the test.
+It checks the built HTML (titles, link-preview tags, the static intro), the plain page
+(no JS / models / textures, blank fields hidden, images sized), the skip links and
+keyboard focus, `?nowebgl=1` and a failing renderer, print styles (and writes
+`smoke-output/projects-print.pdf`), and phone emulation (pinch-zoom on the plain page;
+touches on the 3D canvas reach the scene instead of zooming). Screenshots go to
+`smoke-output/`.
+
 ---
 
 ## ✦ The most important file: `src/content.ts`
@@ -394,6 +411,10 @@ index.html              ← the 3D world's page (head tags baked in from content
 projects/
   index.html            ← the plain page's template (body baked in from content.ts)
   plain.css             ← its styles, inlined at build time
+assets-src/images/      ← full-quality originals of the WebP photos (not deployed)
+scripts/
+  compress-images.py    ← originals → WebP in public/images/
+  smoke.mjs             ← npm run smoke: offline end-to-end checks
 plugins/
   site-pages.ts         ← Vite plugin: bakes content.ts into both HTML pages
   plain-page.ts         ← renders the plain page + lists its blank fields
