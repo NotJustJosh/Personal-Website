@@ -3,13 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- maximum-scale + user-scalable=no keeps the 3D canvas from zooming on mobile -->
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <meta name="description" content="An explorable 3D personal portfolio." />
-    <title>Portfolio — 3D World</title>
+    <!-- Zoom stays enabled; the 3D canvas opts out of browser gestures itself
+         with `touch-action: none` (index.css), so nothing else loses pinch-zoom. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Title, description and link-preview tags, baked in from src/content.ts
+         (`meta.home`) by plugins/site-pages.ts. -->
+    <!--site:head-->
   </head>
   <body>
     <div id="root"></div>

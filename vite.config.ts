@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { sitePages } from './plugins/site-pages'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GitHub Pages base path  (READ THIS — it is the #1 cause of a blank page)
@@ -26,5 +27,6 @@ const base = process.env.BASE_PATH ?? `/${REPO_NAME}/`
 // https://vite.dev/config/
 export default defineConfig({
   base,
-  plugins: [react()],
+  // sitePages bakes src/content.ts into the HTML (see plugins/site-pages.ts).
+  plugins: [react(), sitePages()],
 })

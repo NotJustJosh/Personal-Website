@@ -392,9 +392,46 @@ export interface Island {
   groundRotation?: number
 }
 
+/**
+ * The <title>, description and link-preview (Open Graph / Twitter) tags for one
+ * HTML page. These are baked into the raw HTML at build time, so they exist
+ * before any JavaScript runs — which is what link unfurlers and search engines
+ * read.
+ */
+export interface PageMeta {
+  /** Browser-tab and search-result title. */
+  title: string
+  /** Search-result snippet. */
+  description: string
+  /** Title on a pasted link's preview card (Slack, LinkedIn, iMessage…). */
+  ogTitle: string
+  /** Description on a pasted link's preview card. */
+  ogDescription: string
+  /** The page's public URL — becomes og:url and the canonical link. */
+  url: string
+}
+
+export interface SiteMeta {
+  /**
+   * Link-preview image, 1200×630. Must be an ABSOLUTE URL (preview bots don't
+   * resolve relative ones); drop the file in /public so it deploys there.
+   */
+  ogImage: string
+  /** The 3D world (index.html). */
+  home: PageMeta
+  /** The plain page (projects/index.html). */
+  plain: PageMeta
+}
+
 export interface SiteContent {
   /** Your name / site title. */
   name: string
+  /** Full name, used in page titles, link previews and the plain page. */
+  fullName: string
+  /** The deployed site's public URL, with a trailing slash. */
+  siteUrl: string
+  /** Page titles, descriptions and link-preview tags. */
+  meta: SiteMeta
   /** Short tagline shown under your name (Classic view + loading). */
   tagline: string
   /** Resume location: a full URL, or a file dropped into /public (e.g. resume.pdf). */
@@ -406,8 +443,33 @@ export interface SiteContent {
 // ─────────────────────────────────────────────────────────────────────────────
 //  👇  EDIT EVERYTHING BELOW THIS LINE  👇
 // ─────────────────────────────────────────────────────────────────────────────
+const SITE_URL = 'https://notjustjosh.github.io/Personal-Website/'
+
 export const content: SiteContent = {
   name: 'Josh Yuen',
+  fullName: 'Joshua Yuen',
+  siteUrl: SITE_URL,
+
+  meta: {
+    ogImage: `${SITE_URL}og-preview.png`,
+    home: {
+      title: 'Joshua Yuen | Electrical Engineering & Physics',
+      description:
+        'Northeastern EE & physics student. Wearable IMU input device for CAD, MEMS characterization with a Michelson interferometer, underwater ROV electronics.',
+      ogTitle: 'Joshua Yuen | Engineering Portfolio',
+      ogDescription: 'Wearable CAD input device, MEMS interferometry, ROV electronics.',
+      url: SITE_URL,
+    },
+    plain: {
+      title: 'Projects | Joshua Yuen',
+      description:
+        'Projects and experience of Joshua Yuen, Northeastern EE & physics student: a wearable IMU input device for CAD, MEMS characterization with a Michelson interferometer, underwater ROV electronics.',
+      ogTitle: 'Joshua Yuen | Projects',
+      ogDescription: 'Wearable CAD input device, MEMS interferometry, ROV electronics. The plain, fast version of the portfolio.',
+      url: `${SITE_URL}projects/`,
+    },
+  },
+
   tagline: 'Electrical Engineering and Physics Student · Aspiring Photonics Systems & Optical Computing Researcher · Interdisciplinary Systems Advocate',
 
   // Put your resume PDF at /public/resume.pdf, or use a full URL.
