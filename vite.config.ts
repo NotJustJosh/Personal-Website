@@ -29,4 +29,14 @@ export default defineConfig({
   base,
   // sitePages bakes src/content.ts into the HTML (see plugins/site-pages.ts).
   plugins: [react(), sitePages()],
+  build: {
+    rollupOptions: {
+      // Two pages: the 3D world, and the plain page at projects/ (static HTML,
+      // no JavaScript — it never loads three.js).
+      input: {
+        main: 'index.html',
+        projects: 'projects/index.html',
+      },
+    },
+  },
 })

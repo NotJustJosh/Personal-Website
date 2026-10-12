@@ -138,6 +138,15 @@
 //  so any audio track is ignored. Keep clips to 3-8 seconds and a few MB; they
 //  load with the card, and Pages caps a single file at 100 MB. Anyone with
 //  "reduce motion" set gets a paused frame plus controls instead.
+//  (On the plain page the same clip gets controls and never autoplays.)
+//
+//  ─── THE PLAIN PAGE (projects/) ────────────────────────────────────────────
+//  This file also feeds a plain-HTML version of the site at projects/, built
+//  without three.js. Projects there take extra write-up fields (`summary`,
+//  `problem`, `hardPart`, `scope`, `decisions`, `results`, `rev2` — see the
+//  Project interface); the 3D panels ignore them. Blank ones don't render, and
+//  `npm run dev` / `npm run build` print the list of what's still blank.
+//  Order and plain-page-only entries: `plainPage`, at the very bottom.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ZONE_ACCENTS } from './config'
@@ -177,6 +186,11 @@ export interface LinkItem {
 export interface MediaItem {
   /** Full-size image: a file in /public (e.g. 'images/foo.jpg') or a full URL. */
   src: string
+  /**
+   * What the image shows, for screen readers. The plain page needs it; until
+   * it's written the caption stands in, and the build lists it as empty.
+   */
+  alt?: string
   /** Caption shown under the image in the gallery + lightbox. Doubles as alt text. */
   caption?: string
   /** Optional smaller file for thumbnails + the 3D preview. Defaults to `src`. */
@@ -239,6 +253,36 @@ export interface Project {
   video?: Video
   /** Optional short glyph (letter/number/symbol) for the orbiting icon. */
   icon?: string
+
+  // ── Plain-page write-up (projects/) ─────────────────────────────────────
+  // Everything below is read ONLY by the plain page; the 3D panels ignore it.
+  // Blank fields don't render, so nothing half-written ships — and `npm run
+  // dev` / `npm run build` print every blank one so you know what's left.
+  // Evidence is this project's `images` + `video` above (shared with the 3D
+  // card), each image ideally with `alt` text.
+
+  /** Anchor on the plain page, for deep links: projects/#gloves. */
+  id?: string
+  /** One line: what it is. Shown right under the title. */
+  summary?: string
+  /** The problem it solves. Prose, same formatting rules as `description`. */
+  problem?: string
+  /** What made it hard. */
+  hardPart?: string
+  /** What you personally did. */
+  scope?: string
+  /** Design questions and your answers. A question with a blank answer is hidden. */
+  decisions?: Decision[]
+  /** What it achieved. */
+  results?: string
+  /** What you'd change in the next revision. */
+  rev2?: string
+}
+
+/** One design decision on the plain page: the question renders as a subheading. */
+export interface Decision {
+  question: string
+  answer: string
 }
 
 /** One row of a controls tutorial: some key caps and what they do. */
@@ -285,6 +329,12 @@ export interface Slide {
    * Omit to show the slide in both views.
    */
   only?: '3d' | 'classic'
+  /**
+   * Set false to leave this slide off the plain page (projects/), which shows
+   * the About deck as ordinary headed paragraphs. `only: '3d'` slides are
+   * always left off.
+   */
+  plainPage?: boolean
 }
 
 /**
@@ -423,6 +473,31 @@ export interface SiteMeta {
   plain: PageMeta
 }
 
+export interface Contact {
+  /** Bare address — links become mailto: automatically. */
+  email: string
+  github: string
+  linkedin: string
+}
+
+/**
+ * The plain page (projects/): a fast, no-WebGL version of the site, baked to
+ * static HTML at build time from this file. It reads these islands by id:
+ *   projects   → Projects (after `leadProjects`)
+ *   experience → Experience
+ *   about      → About (its slides, as headed paragraphs)
+ *   honors     → About › Honors
+ *   resources  → About › Documents
+ */
+export interface PlainPageContent {
+  /** Project ids shown first, in this order. The Projects island's other entries follow. */
+  leadProjects: string[]
+  /** Write-ups that appear ONLY on the plain page — no island in the 3D world shows them. */
+  extraProjects: Project[]
+  /** One-line notice shown when the 3D scene couldn't start and sent the visitor here. */
+  fallbackNotice: string
+}
+
 export interface SiteContent {
   /** Your name / site title. */
   name: string
@@ -434,16 +509,29 @@ export interface SiteContent {
   meta: SiteMeta
   /** Short tagline shown under your name (Classic view + loading). */
   tagline: string
+  /** One plain sentence under your name on the loading screen and the plain page. */
+  oneLiner: string
+  /** Email / GitHub / LinkedIn — the Contact island and the plain page both read these. */
+  contact: Contact
   /** Resume location: a full URL, or a file dropped into /public (e.g. resume.pdf). */
   resumeUrl: string
   /** The floating islands that make up the world. Edit this to change the site. */
   islands: Island[]
+  /** The plain page's own settings + plain-page-only write-ups. */
+  plainPage: PlainPageContent
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  👇  EDIT EVERYTHING BELOW THIS LINE  👇
 // ─────────────────────────────────────────────────────────────────────────────
 const SITE_URL = 'https://notjustjosh.github.io/Personal-Website/'
+
+// Declared up here so the Contact island below and the plain page share them.
+const CONTACT: Contact = {
+  email: 'yuen.jo@northeastern.edu',
+  github: 'https://github.com/NotJustJosh',
+  linkedin: 'https://www.linkedin.com/in/josh-yuen-a30a79322/',
+}
 
 export const content: SiteContent = {
   name: 'Josh Yuen',
@@ -471,6 +559,8 @@ export const content: SiteContent = {
   },
 
   tagline: 'Electrical Engineering and Physics Student · Aspiring Photonics Systems & Optical Computing Researcher · Interdisciplinary Systems Advocate',
+  oneLiner: 'Electrical engineering and physics student at Northeastern University.',
+  contact: CONTACT,
 
   // Put your resume PDF at /public/resume.pdf, or use a full URL.
   resumeUrl: 'resume.pdf',
@@ -494,6 +584,8 @@ export const content: SiteContent = {
         slides: [
           {
             hero: true,
+            // The plain page opens with your name already.
+            plainPage: false,
             title: "Hi, I\'m Josh Yuen",
             image: 'images/portrait.jpg',
             subtitle: `Electrical Engineering and Physics Student · 
@@ -528,6 +620,8 @@ export const content: SiteContent = {
           },
           {
             title: 'Have a look around',
+            // Talks about the 3D world's menu, so it's left off the plain page.
+            plainPage: false,
             // image: 'images/world-overview.jpg',
             body: [
               `Feel free to take a look around my virtual world 
@@ -603,18 +697,37 @@ export const content: SiteContent = {
             //   { src: 'images/glove-imu.jpg', caption: '9-axis IMU on the index finger' },
             // ],
             images: [
-              { src: 'images/gloves.png',
+              { src: 'images/gloves.png', alt: '',
                 caption: '9-axis IMUs integrated with winter gloves' },
-              { src: 'images/gloves-two.png',
+              { src: 'images/gloves-two.png', alt: '',
                 caption: 'Data output test--UDP connection and wireless data transfer'},
             ],
             links: [
               //{ label: 'Live', url: 'https://example.com' },
               //{ label: 'Code', url: 'https://github.com/yourname/project-one' },
             ],
+
+            // ── Plain-page write-up (projects/#gloves) ──
+            id: 'gloves',
+            summary: 'A wearable, mouseless interface for CAD tools. IMUs in the glove fingertips, with I2C multiplexers.',
+            problem: '',
+            hardPart: '',
+            scope: 'I designed the system, selected the IMUs and multiplexers, soldered the components, and wrote and debugged the software.',
+            decisions: [
+              { question: 'Why an I2C multiplexer instead of address-select pins or separate buses?', answer: '' },
+              { question: 'What does the finger wiring do to bus capacitance and rise time, and how were the pull-ups sized?', answer: '' },
+              { question: 'Why I2C rather than SPI?', answer: '' },
+              { question: 'What per-finger update rate does the system reach through the mux?', answer: '' },
+              { question: "What's the end-to-end latency from finger motion to a CAD action, and how was it measured?", answer: '' },
+              { question: 'How is gyro drift handled?', answer: '' },
+              { question: 'What fails first mechanically, and where?', answer: '' },
+            ],
+            results: '',
+            rev2: '',
           },
           {
             name: 'Deployable Solar Array for Small Satellites',
+            id: 'solar-array',
             short: 'Satellite Solar Array',
             date: 'September 2025 - May 2026',
             description:
@@ -627,6 +740,7 @@ export const content: SiteContent = {
           },
           {
             name: 'License Plate OCR Model',
+            id: 'ocr',
             date: 'May 2026 - June 2026',
             description:
               'License plate imaging pipeline for fog occlusions and low visibility settings using grayscaling, gaussian filtering, and unsharp masking',
@@ -637,6 +751,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Terasic Spider Robot: Embedded Systems',
+            id: 'spider-robot',
             short: 'Spider Robot',
             date: 'May 2026 - June 2026',
             description:
@@ -647,7 +762,7 @@ export const content: SiteContent = {
             // video: { src: 'videos/spider-robot.mp4',
             //          caption: 'Gait test — servo PWM driven from the DE10-Nano' },
             images: [
-              { src: 'images/spider-robot.png',
+              { src: 'images/spider-robot.png', alt: '',
                 caption: 'Spider Robot' },
             ],
             links: [
@@ -656,17 +771,19 @@ export const content: SiteContent = {
           },
           {
             name: 'Automation of Dechlorination Tools for Aqua Pennsylvania',
+            id: 'aqua',
             short: 'Dechlorination Automation Tool',
             date: 'August 2024 - May 2025',
             description: ' Led development of automation solutions to improve water treatment efficiency that applied engineering principles to real-world challenges in partnership with Aqua Pennsylvania, a utility company; Co-created and taught an accredited class that developed and implemented real-world projects.',
             tags: ['Sensing Array'],
             images: [
-              { src: 'images/aqua-project.png',
+              { src: 'images/aqua-project.png', alt: '',
                 caption: 'Leadership team at the job site with Aqua Representative' },
             ],
           },
           {
             name: 'Publication: Hide and Seek: A Multimodal Approach to Human Detection',
+            id: 'hide-and-seek',
             short: 'Human Detection through Facial Recognition Software',
             date: 'July 2024',
             description: `Investigated the results of integrating IR sensing, motion profiling, and mmWave sensing into an open source 
@@ -674,7 +791,7 @@ export const content: SiteContent = {
             Implemented a machine learning model to interpret results.  Published in the 39th Volume of the Journal of the Pennsylvania Governor\’s School for the Sciences.`,
             tags: ['Facial Recognition', 'Machine Learning/Artificial Intelligence', 'Sensing Array'],
             images: [
-              { src: 'images/hide-and-seek-paper.png',
+              { src: 'images/hide-and-seek-paper.png', alt: '',
                 caption: 'Hide and Seek: A Multimodal Approach to Human Detection',
                 href: 'hide-and-seek-paper.pdf' },
             ],
@@ -703,6 +820,7 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'Research Assistant: Microscale Acoustic and Photonic Systems Laboratory, Northeastern University',
+            id: 'maps-lab',
             short: 'MAPS Lab',
             date: 'Sep 2025 \– Present',
             description: `- Developing shot-noise limited Michelson Interferometer to allow for better 
@@ -723,6 +841,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Hourly Course Assistant (HCA): EECE2160 Embedded Design: Enabling Robotics, Northeastern University',
+            id: 'ta-eece2160',
             short: 'Embedded Design Course Assistant',
             date: 'Sep 2026 - Present',
             description: `- Working as a paid assistant (10 hrs/wk) for the electrical engineering fundamental
@@ -730,6 +849,8 @@ export const content: SiteContent = {
             \n - Primarily assisted students by giving feedback and checking work during their 
             allotted lab times and open lab hours, 
             hosted additional online office hours for homework help, and graded homeworks and exams`,
+            // Plain page only — the line under the title.
+            summary: 'Teaching assistant for EECE 2160 at Northeastern: FPGA/digital logic labs with Quartus and the DE1-SoC board.',
             images: [
               { src: 'images/NEUCOE-logo.png',
                 caption: 'Northeastern College of Engineering Logo' },
@@ -738,6 +859,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Electrical Team Deputy, Solar Array Project Electrical Lead: NEU Satellite Labs',
+            id: 'nsl',
             short: 'NEU Satellite Labs',
             date: 'Sep 2025 - May 2026',
             description: `- As Overal EE Deputy: Worked as second-in-command under NEU Satellite Labs Electrical Team Lead to: 
@@ -767,9 +889,10 @@ export const content: SiteContent = {
         title: 'Contact',
         body: ['Want to get in touch? Pick whichever works for you.'],
         links: [
-          { label: 'Email (click to copy)', url: 'yuen.jo@northeastern.edu', copy: true },
-          { label: 'GitHub', url: 'https://github.com/NotJustJosh' },
-          { label: 'LinkedIn', url: 'https://www.linkedin.com/in/josh-yuen-a30a79322/' },
+          // Values come from CONTACT at the top of this section.
+          { label: 'Email (click to copy)', url: CONTACT.email, copy: true },
+          { label: 'GitHub', url: CONTACT.github },
+          { label: 'LinkedIn', url: CONTACT.linkedin },
         ],
       },
     },
@@ -837,4 +960,50 @@ export const content: SiteContent = {
       },
     },
   ],
+
+  // ── Plain page (projects/) ───────────────────────────────────────────────
+  // A fast, plain-HTML version of the site, for anyone who wants the project
+  // write-ups without the 3D world. See PlainPageContent above for which
+  // islands it reads. Blank fields stay hidden until you write them.
+  plainPage: {
+    leadProjects: ['gloves', 'lab', 'rov'],
+    fallbackNotice:
+      "The 3D scene couldn't start on this device, so this is the plain version of the portfolio.",
+
+    // These two exist only on the plain page — adding them to an island would
+    // put new orbiting items in the 3D world.
+    extraProjects: [
+      {
+        id: 'lab',
+        name: 'MEMS Characterization with a Michelson Interferometer',
+        date: '',
+        summary:
+          'Microscale Acoustic and Photonic Systems Lab, Northeastern. Characterizing MEMS devices with a Michelson interferometer.',
+        description: '',
+        problem: '',
+        hardPart: '',
+        scope: '',
+        decisions: [],
+        images: [],
+        results: '',
+        rev2: '',
+        links: [{ label: 'MAPS Lab website', url: 'https://sites.google.com/view/mapslab' }],
+      },
+      {
+        id: 'rov',
+        name: 'Underwater ROV Electronics',
+        date: '',
+        summary: 'NU Robotics: circuits for the underwater ROV.',
+        description: '',
+        problem: '',
+        hardPart: '',
+        scope: '',
+        decisions: [],
+        images: [],
+        results: '',
+        rev2: '',
+        links: [],
+      },
+    ],
+  },
 }

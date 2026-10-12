@@ -1,8 +1,10 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { normalizePath, runnerImport } from 'vite'
-import type { Plugin, ResolvedConfig } from 'vite'
+import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
 import type { SiteContent } from '../src/content'
 import { renderHead } from './html'
+import { emptyFields, renderPlainBody } from './plain-page'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Bakes src/content.ts into the HTML pages — at build time, and on every
@@ -11,24 +13,47 @@ import { renderHead } from './html'
 //  engines and no-WebGL visitors get).
 //
 //  Each page marks where generated markup goes with an HTML comment:
-//    <!--site:head-->   <title>, description, Open Graph / Twitter tags
+//    <!--site:head-->         <title>, description, Open Graph / Twitter tags
+//    <!--site:plain-css-->    projects/plain.css, inlined   (projects/ only)
+//    <!--site:plain-body-->   the plain page itself         (projects/ only)
 //
 //  A missing marker fails the build rather than shipping a page without it.
+//
+//  It also prints the plain page's blank fields (see emptyFields) when the dev
+//  server starts, whenever content.ts changes, and on every build.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CONTENT_MODULE = 'src/content.ts'
+const PLAIN_CSS = 'projects/plain.css'
 
-type PageId = 'home'
+type PageId = 'home' | 'plain'
 
 /** Which page an HTML file is, by its path relative to the project root. */
 const PAGES: Record<string, PageId> = {
   'index.html': 'home',
+  'projects/index.html': 'plain',
 }
 
 function fill(html: string, marker: string, markup: string, file: string): string {
   const tag = `<!--site:${marker}-->`
   if (!html.includes(tag)) throw new Error(`[site-pages] ${file} is missing the ${tag} marker`)
   return html.replace(tag, () => markup)
+}
+
+/** Comments out, runs of whitespace collapsed — enough for an inline <style>. */
+function compactCss(css: string): string {
+  return css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim()
+}
+
+function formatReport(content: SiteContent): string {
+  const rows = emptyFields(content)
+  if (!rows.length) return 'Plain page: every field is written.'
+  const width = Math.max(...rows.map(([id]) => id.length)) + 2
+  const total = rows.reduce((n, [, fields]) => n + fields.length, 0)
+  return [
+    `Plain page: ${total} blank fields in ${CONTENT_MODULE} (hidden on projects/ until written):`,
+    ...rows.map(([id, fields]) => `  ${id.padEnd(width)}${fields.join(', ')}`),
+  ].join('\n')
 }
 
 export function sitePages(): Plugin {
@@ -52,6 +77,14 @@ export function sitePages(): Plugin {
     return cached
   }
 
+  async function report() {
+    config.logger.info('\n' + formatReport(await loadContent()) + '\n')
+  }
+
+  function reloadPlainPage(server: ViteDevServer) {
+    server.ws.send({ type: 'full-reload', path: '/projects/index.html' })
+  }
+
   return {
     name: 'site-pages',
 
@@ -59,9 +92,22 @@ export function sitePages(): Plugin {
       config = resolved
     },
 
+    // Runs once per build, and once when the dev server starts.
+    async buildStart() {
+      await report()
+    },
+
     configureServer(server) {
+      const css = normalizePath(path.join(config.root, PLAIN_CSS))
+      server.watcher.add(css)
       server.watcher.on('change', (file) => {
-        if (watched.has(normalizePath(path.resolve(file)))) cached = undefined
+        const changed = normalizePath(path.resolve(file))
+        if (changed === css) return reloadPlainPage(server)
+        if (!watched.has(changed)) return
+        cached = undefined
+        // The 3D app hot-reloads content.ts by itself; the plain page has no
+        // client code to do that, so reload it.
+        report().then(() => reloadPlainPage(server), (err) => config.logger.error(String(err)))
       })
     },
 
@@ -75,7 +121,14 @@ export function sitePages(): Plugin {
         if (!page) return html
 
         const content = await loadContent()
-        return fill(html, 'head', renderHead(content.meta[page], content.meta.ogImage), file)
+        html = fill(html, 'head', renderHead(content.meta[page], content.meta.ogImage), file)
+
+        if (page === 'plain') {
+          const css = fs.readFileSync(path.join(config.root, PLAIN_CSS), 'utf8')
+          html = fill(html, 'plain-css', `<style>${compactCss(css)}</style>`, file)
+          html = fill(html, 'plain-body', renderPlainBody(content, { base: config.base, publicDir: config.publicDir }), file)
+        }
+        return html
       },
     },
   }

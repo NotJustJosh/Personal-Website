@@ -223,6 +223,65 @@ Delete its entry **and** remove its id from any other island's `neighbors`.
 
 ---
 
+## The plain page (`projects/`)
+
+A fast, plain-HTML version of the portfolio at `projects/` — no JavaScript, no
+three.js, no models. It's rendered to static HTML **at build time from the same
+`src/content.ts`** (by [`plugins/plain-page.ts`](plugins/plain-page.ts)), so there's
+still only one place to edit text. In dev it's re-rendered on every request.
+
+It shows Projects, Experience and About:
+
+- **Projects**: the ids in `plainPage.leadProjects` first (gloves, lab, rov), then the
+  rest of the Projects island in order. `plainPage.extraProjects` holds write-ups that
+  exist **only** on this page (the lab and ROV entries) — putting them on an island
+  would add orbiting items to the 3D world.
+- **Experience**: the Experience island's entries (title, date, `summary`, description).
+- **About**: the About island's slides (minus `only: '3d'` and `plainPage: false`
+  slides), the Honors list, and the Resources island's download links.
+
+Every project has an `id`, which is its anchor — link straight to one with
+`projects/#gloves`.
+
+### Write-up fields
+
+Projects take these extra fields; the 3D panels ignore them:
+
+```ts
+{
+  id: 'gloves',
+  summary: 'One line: what it is.',
+  problem: '',            // prose — same "- " bullet / blank-line rules as description
+  hardPart: '',
+  scope: '',              // what you personally did
+  decisions: [
+    { question: 'Why I2C rather than SPI?', answer: '' },   // question = subheading
+  ],
+  results: '',
+  rev2: '',
+  // Evidence = the project's existing `images` (+ optional `video`), shared with
+  // the 3D card. Give each image `alt` text; until then its caption stands in.
+}
+```
+
+**Blank fields don't render** — no empty headings, and a decision with a blank answer
+is hidden — so nothing half-written ships. `npm run dev` (on start and on every
+`content.ts` save) and `npm run build` print every blank field:
+
+```
+Plain page: 64 blank fields in src/content.ts (hidden on projects/ until written):
+  gloves   problem, hardPart, decisions 1-7 (answer), images 1-2 (alt; caption stands in), …
+```
+
+Links to template placeholders (`github.com/yourname/…`, `example.com`) are left off
+the plain page and called out in that list.
+
+Page titles, descriptions and link-preview (Open Graph) tags for both pages live in
+`content.meta`; the plugin bakes them into the HTML. Styles are in
+[`projects/plain.css`](projects/plain.css), inlined into the page at build time.
+
+---
+
 ## Tuning the feel
 
 | What | Where |
@@ -257,6 +316,14 @@ self-host the decoder (no CDN), copy `node_modules/three/examples/jsm/libs/draco
 ## Project structure
 
 ```
+index.html              ← the 3D world's page (head tags baked in from content.ts)
+projects/
+  index.html            ← the plain page's template (body baked in from content.ts)
+  plain.css             ← its styles, inlined at build time
+plugins/
+  site-pages.ts         ← Vite plugin: bakes content.ts into both HTML pages
+  plain-page.ts         ← renders the plain page + lists its blank fields
+  html.ts, image-size.ts
 src/
   content.ts            ← EDIT THIS: the islands array = the whole world
   config.ts             ← world border, respawn Y, gravity, island dimensions
@@ -286,7 +353,8 @@ src/
     Toast.tsx           ← transient "Copied …" notification
   lib/
     world.ts            ← derived helpers: bridges, nearest island, spawn, panel adapter
-    paths.ts            ← base-path-aware URL helper
+    paths.ts, url.ts    ← base-path-aware URL helper
+    prose.ts            ← "- " bullets / paragraphs rules (shared with the plain page)
     clipboard.ts        ← clipboard copy with a legacy fallback
     media.ts            ← normalizes content.ts `images` entries into real URLs
     device.ts           ← WebGL + mobile detection
