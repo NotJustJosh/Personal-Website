@@ -3,9 +3,10 @@
 An explorable, single-player **open-world style** personal site: a world of **floating
 islands in a soft pale void**, connected by light-bridges. Walk a character across the
 islands, step onto one, and press **E** to open a clean HTML panel with that section's
-content. The entire world is **data-driven from one file** (`src/content.ts`). Phones and
-no-WebGL browsers automatically get a clean, scrollable 2D **Classic view** with a nav
-menu. It builds to static files and deploys to **GitHub Pages**.
+content. The entire world is **data-driven from one file** (`src/content.ts`). Phones
+automatically get a clean, scrollable 2D **Classic view** with a nav menu; browsers that
+can't run the 3D scene go to a fast **plain page** (`projects/`) instead. It builds to
+static files and deploys to **GitHub Pages**.
 
 > No backend, no multiplayer, no networking — it all builds to static files.
 
@@ -225,7 +226,7 @@ Delete its entry **and** remove its id from any other island's `neighbors`.
 
 ## The plain page (`projects/`)
 
-A fast, plain-HTML version of the portfolio at `projects/` — no JavaScript, no
+A fast, plain-HTML version of the portfolio at `projects/` — no script bundle, no
 three.js, no models. It's rendered to static HTML **at build time from the same
 `src/content.ts`** (by [`plugins/plain-page.ts`](plugins/plain-page.ts)), so there's
 still only one place to edit text. In dev it's re-rendered on every request.
@@ -242,6 +243,21 @@ It shows Projects, Experience and About:
 
 Every project has an `id`, which is its anchor — link straight to one with
 `projects/#gloves`.
+
+### Loading screen, skip links and the WebGL fallback
+
+- The 3D world's **loading screen** is static HTML baked into `index.html` from
+  `content.ts` — your name, `oneLiner`, résumé / GitHub / LinkedIn / email, and
+  **Skip to projects** — so it's readable before any JavaScript runs. It fades once the
+  scene is ready ([`src/lib/boot.ts`](src/lib/boot.ts)).
+- A **Skip to projects** link stays in the scene's top-left corner, first in tab order
+  and above any open panel.
+- [`src/main.tsx`](src/main.tsx) checks for WebGL 2 with three.js's own helper
+  **before** downloading the 3D bundle. No WebGL 2, or a renderer that throws while
+  being created ([`World.tsx`](src/scene/World.tsx)), sends the visitor to
+  `projects/?reason=webgl`, which shows a one-line notice (`plainPage.fallbackNotice`).
+  If the GPU drops the context mid-visit, a notice appears under the skip link.
+- **Test the fallback** with `?nowebgl=1`, e.g. `http://localhost:5173/Personal-Website/?nowebgl=1`.
 
 ### Write-up fields
 
@@ -328,6 +344,7 @@ src/
   content.ts            ← EDIT THIS: the islands array = the whole world
   config.ts             ← world border, respawn Y, gravity, island dimensions
   store.ts              ← shared UI/teleport/fade state (zustand)
+  main.tsx              ← entry: WebGL 2 check, then loads start.tsx (the app)
   App.tsx               ← 3D world vs Classic view; DOM UI layout
   scene/
     World.tsx           ← the <Canvas> + pale-void background/fog
@@ -342,7 +359,7 @@ src/
     CameraRig.tsx       ← orbit camera w/ pitch clamp + raycast anti-clip
     Avatar.tsx          ← example .glb avatar (not used by default)
   ui/                   ← plain HTML/DOM over the canvas
-    LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI,
+    LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI, SkipLink,
     FastTravelMenu, FadeOverlay, InputManager, ClassicView
     ProjectCard.tsx     ← one project card, shared by Panel + ClassicView
     Gallery.tsx         ← image thumbnails + the full-size lightbox
@@ -358,6 +375,8 @@ src/
     clipboard.ts        ← clipboard copy with a legacy fallback
     media.ts            ← normalizes content.ts `images` entries into real URLs
     device.ts           ← WebGL + mobile detection
+    fallback.ts         ← the way out to the plain page (+ ?nowebgl=1)
+    boot.ts             ← drives the static loading screen in index.html
     gltf.ts             ← GLTF loader with Draco support
   hooks/
     useMovementKeys.ts  ← held-key movement state (WASD/arrows + Space)
@@ -404,7 +423,7 @@ workflow's `deploy` job and under Settings → Pages.
 
 ## Notes
 
-- **Mobile/low-end:** phones and no-WebGL browsers get the Classic view automatically
+- **Mobile/low-end:** phones get the Classic view automatically
   ([`lib/device.ts`](src/lib/device.ts)); desktop users can toggle any time.
 - The build prints a chunk-size warning — that's Three.js + Rapier's WASM (~1.2 MB
   gzipped), normal for a 3D app, not an error.

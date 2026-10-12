@@ -102,6 +102,14 @@ a:focus-visible {
   border-radius: 2px;
 }
 
+/* "The 3D scene couldn't start…" — only when the 3D world sent you here. */
+.notice {
+  margin: 0 0 2rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(91, 140, 255, 0.12);
+}
+
 .lede {
   margin-bottom: 1rem;
   color: var(--muted);

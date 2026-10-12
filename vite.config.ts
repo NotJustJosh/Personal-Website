@@ -32,7 +32,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       // Two pages: the 3D world, and the plain page at projects/ (static HTML,
-      // no JavaScript — it never loads three.js).
+      // no script bundle — it never loads three.js).
       input: {
         main: 'index.html',
         projects: 'projects/index.html',

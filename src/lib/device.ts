@@ -1,16 +1,14 @@
+import WebGL from 'three/addons/capabilities/WebGL.js'
+import { forcedNoWebGL } from './fallback'
+
 // Capability detection used to decide between the 3D world and the Classic view.
 
-/** Returns true if the browser can create a WebGL context. */
+/**
+ * Returns true if the browser can run the 3D world. three.js needs WebGL 2,
+ * so this is three's own check for it (the same one main.tsx runs first).
+ */
 export function isWebGLAvailable(): boolean {
-  try {
-    const canvas = document.createElement('canvas')
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-    )
-  } catch {
-    return false
-  }
+  return !forcedNoWebGL() && WebGL.isWebGL2Available()
 }
 
 /** Best-effort "is this a phone/tablet" check. */

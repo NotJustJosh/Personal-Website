@@ -7,7 +7,8 @@ import { imageSize } from './image-size'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  The plain page (projects/), rendered to static HTML from src/content.ts.
-//  No JavaScript, no three.js: one HTML file plus the images it shows.
+//  No three.js and no bundle: one HTML file plus the images it shows. (Its only
+//  script is three inline lines that reveal the "3D couldn't start" notice.)
 //
 //  The one rule that matters: a blank field renders NOTHING — no empty
 //  heading, no placeholder — so a half-written write-up never ships.
@@ -238,6 +239,12 @@ export function renderPlainBody(content: SiteContent, o: PlainPageOptions): stri
 
   return `
 <header class="intro">
+<p class="notice" id="fallback-notice" hidden>${esc(content.plainPage.fallbackNotice)}</p>
+<script>
+  // Shown only when the 3D world sent the visitor here because it couldn't start.
+  if (new URLSearchParams(location.search).get('reason') === 'webgl')
+    document.getElementById('fallback-notice').hidden = false
+</script>
 <h1>${esc(content.fullName)}</h1>
 <p class="lede">${esc(content.oneLiner)}</p>
 <ul class="contact">

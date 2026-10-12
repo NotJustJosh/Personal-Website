@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
+import type { RootState } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Experience } from './Experience'
 import { useGame } from '../store'
 import { VISUALS } from '../config'
+import { fallBackToPlainPage } from '../lib/fallback'
 
 // The R3F <Canvas>. Everything 3D lives under <Experience />. The DOM UI is
 // rendered as siblings of this component (see App.tsx), layered on top.
@@ -47,12 +49,36 @@ function QualityManager() {
 const MAX_DPR = 1.5
 const antialias = typeof window === 'undefined' || window.devicePixelRatio < 1.5
 
+// ── FALLBACK ─────────────────────────────────────────────────────────────────
+// main.tsx already checked for WebGL 2, but a context can still fail to come
+// up (blocklisted GPU, too many contexts, driver trouble). R3F creates the
+// renderer inside an un-awaited async step, so a throw there never reaches an
+// error boundary — catching it here is the only reliable place. Same options
+// R3F would have used itself.
+function createRenderer(defaults: THREE.WebGLRendererParameters) {
+  try {
+    return new THREE.WebGLRenderer({ ...defaults, antialias, powerPreference: 'high-performance' })
+  } catch (err) {
+    fallBackToPlainPage()
+    throw err
+  }
+}
+
+// Losing the context mid-visit (GPU reset, the tab being starved) freezes the
+// scene; surface the skip link so the visitor isn't stuck.
+function watchContext({ gl }: RootState) {
+  const { setContextLost } = useGame.getState()
+  gl.domElement.addEventListener('webglcontextlost', () => setContextLost(true))
+  gl.domElement.addEventListener('webglcontextrestored', () => setContextLost(false))
+}
+
 export function World() {
   return (
     <Canvas
       shadows
       dpr={[1, MAX_DPR]}
-      gl={{ antialias, powerPreference: 'high-performance' }}
+      gl={createRenderer}
+      onCreated={watchContext}
       camera={{ fov: 60, near: 0.1, far: 1000, position: [0, 8, 14] }}
     >
       <color attach="background" args={[NIGHT_COLOR]} />

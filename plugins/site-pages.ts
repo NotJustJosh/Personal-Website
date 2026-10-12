@@ -3,7 +3,7 @@ import path from 'node:path'
 import { normalizePath, runnerImport } from 'vite'
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
 import type { SiteContent } from '../src/content'
-import { renderHead } from './html'
+import { renderHead, renderIntro } from './html'
 import { emptyFields, renderPlainBody } from './plain-page'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,6 +14,7 @@ import { emptyFields, renderPlainBody } from './plain-page'
 //
 //  Each page marks where generated markup goes with an HTML comment:
 //    <!--site:head-->         <title>, description, Open Graph / Twitter tags
+//    <!--site:intro-->        the loading screen's static intro  (index.html only)
 //    <!--site:plain-css-->    projects/plain.css, inlined   (projects/ only)
 //    <!--site:plain-body-->   the plain page itself         (projects/ only)
 //
@@ -123,6 +124,9 @@ export function sitePages(): Plugin {
         const content = await loadContent()
         html = fill(html, 'head', renderHead(content.meta[page], content.meta.ogImage), file)
 
+        if (page === 'home') {
+          html = fill(html, 'intro', renderIntro(content, config.base), file)
+        }
         if (page === 'plain') {
           const css = fs.readFileSync(path.join(config.root, PLAIN_CSS), 'utf8')
           html = fill(html, 'plain-css', `<style>${compactCss(css)}</style>`, file)

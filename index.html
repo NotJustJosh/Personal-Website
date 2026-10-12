@@ -9,8 +9,103 @@
     <!-- Title, description and link-preview tags, baked in from src/content.ts
          (`meta.home`) by plugins/site-pages.ts. -->
     <!--site:head-->
+    <!-- Loading screen styles, inline so it's styled before any file arrives. -->
+    <style>
+      .boot {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 24px 16px;
+        overflow-y: auto;
+        background: radial-gradient(120% 120% at 50% 30%, #16213f 0%, #0b1020 70%);
+        color: #eef2ff;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        text-align: center;
+        opacity: 1;
+        transition: opacity 0.6s ease; /* FADE_MS in src/lib/boot.ts allows for this */
+      }
+      .boot[hidden] {
+        display: none;
+      }
+      .boot--done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot__card {
+        width: min(30rem, 100%);
+      }
+      .boot__name {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 1.4rem + 2.5vw, 2.75rem);
+        line-height: 1.1;
+      }
+      .boot__line {
+        margin: 0 0 20px;
+        color: #9fb0d0;
+        font-size: 1.05rem;
+        line-height: 1.5;
+      }
+      .boot__links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px 18px;
+        margin: 24px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .boot a {
+        color: #a3bcff;
+        text-underline-offset: 0.15em;
+      }
+      .boot a:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+      /* Same look as the site's primary buttons (.btn--primary). */
+      .boot .boot__skip {
+        display: inline-block;
+        padding: 10px 18px;
+        border-radius: 10px;
+        background: #3f6fff;
+        color: #ffffff;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .boot .boot__skip:hover {
+        background: #5b8cff;
+      }
+      .boot__progress {
+        margin-top: 36px;
+      }
+      .boot__track {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .boot__fill {
+        width: 6%;
+        height: 100%;
+        background: linear-gradient(90deg, #5b8cff, #9b8cff);
+        border-radius: 999px;
+        transition: width 0.25s ease;
+      }
+      .boot__status {
+        margin: 10px 0 0;
+        color: #9fb0d0;
+        font-size: 0.85rem;
+      }
+    </style>
+    <noscript><style>.boot__progress { display: none; }</style></noscript>
   </head>
   <body>
+    <!-- The loading screen: name, links and "Skip to projects", baked in from
+         src/content.ts so it's readable before any JavaScript runs. -->
+    <!--site:intro-->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
