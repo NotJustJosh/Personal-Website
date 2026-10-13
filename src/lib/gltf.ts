@@ -119,3 +119,33 @@ export function topFaceReach(
   }
   return best
 }
+
+/**
+ * Whether the mesh's TOP face covers the point (x, z), in the geometry's own
+ * units. Expects the non-indexed geometry useBakedGeometry returns.
+ *
+ * Used to keep bridge pillars standing on an island rather than past its rim:
+ * a radius alone can't say where an irregular, stretched outline ends.
+ */
+export function topFaceContains(geometry: THREE.BufferGeometry, x: number, z: number): boolean {
+  const pos = geometry.attributes.position as THREE.BufferAttribute
+  if (!pos) return false
+
+  let topY = -Infinity
+  for (let i = 0; i < pos.count; i++) topY = Math.max(topY, pos.getY(i))
+
+  const EPS = 1e-3
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    if (pos.getY(i) < topY - EPS || pos.getY(i + 1) < topY - EPS || pos.getY(i + 2) < topY - EPS) continue
+    // Barycentric test in the X/Z plane.
+    const x1 = pos.getX(i), z1 = pos.getZ(i)
+    const x2 = pos.getX(i + 1), z2 = pos.getZ(i + 1)
+    const x3 = pos.getX(i + 2), z3 = pos.getZ(i + 2)
+    const d = (z2 - z3) * (x1 - x3) + (x3 - x2) * (z1 - z3)
+    if (Math.abs(d) < 1e-12) continue
+    const l1 = ((z2 - z3) * (x - x3) + (x3 - x2) * (z - z3)) / d
+    const l2 = ((z3 - z1) * (x - x3) + (x1 - x3) * (z - z3)) / d
+    if (l1 >= 0 && l2 >= 0 && l1 + l2 <= 1) return true
+  }
+  return false
+}

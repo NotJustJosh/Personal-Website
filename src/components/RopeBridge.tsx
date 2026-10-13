@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import { useGLTF, Instances, Instance } from '@react-three/drei'
 import type { Island } from '../content'
-import { modelUrl, useBakedGeometry, topFaceReach } from '../lib/gltf'
+import { modelUrl, useBakedGeometry, topFaceReach, topFaceContains } from '../lib/gltf'
 import { islandRadius, groundModelOf } from '../lib/world'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,6 +54,14 @@ const WALL_HALF_THICK = 0.06
 const PILLAR_HEIGHT = 4.5 // ~2.5x the 1.8-unit player: reads as a gateway
 const PILLAR_CLEAR = 1.25 // pushed this far OUTSIDE the handrail, clear of the posts
 const PILLAR_SINK = 0.25 // sunk slightly into the ground so it never floats
+// Where the rim curves away (a small island, or the short side of a stretched
+// one) a pillar pushed out beside the handrail can land past the edge. The pair
+// at that end is then stepped back onto the island together, this far at most.
+const PILLAR_PULLBACK_STEP = 0.2
+const PILLAR_PULLBACK_MAX = 8
+// The same goes for the handrail posts at the very end of the deck: that end is
+// stepped further onto the island until both posts stand on its top face.
+const ENDPOINT_STEP = 0.2
 const RAIL_RADIUS = 0.06
 const ROPE_RADIUS = 0.045
 
@@ -92,7 +100,7 @@ function hashString(s: string) {
  */
 function islandRim(
   island: Island,
-  ground: { geometry: THREE.BufferGeometry; size: THREE.Vector3 },
+  ground: Ground,
   dirX: number,
   dirZ: number,
 ): number {
@@ -100,6 +108,32 @@ function islandRim(
   const scale = radius / Math.max(ground.size.x / 2, 1e-3)
   const reach = topFaceReach(ground.geometry, dirX, dirZ) * scale
   return reach > 1e-3 ? reach : radius
+}
+
+type Ground = { geometry: THREE.BufferGeometry; size: THREE.Vector3 }
+
+/**
+ * True if a square footprint of half-width `half` (a pillar, a post), centred
+ * at world (x, z) and turned by `yaw`, has the island's top face under all four
+ * of its corners.
+ */
+function footprintFits(
+  island: Island,
+  ground: Ground,
+  x: number,
+  z: number,
+  yaw: number,
+  half: number,
+): boolean {
+  const scale = islandRadius(island) / Math.max(ground.size.x / 2, 1e-3)
+  const c = Math.cos(yaw)
+  const s = Math.sin(yaw)
+  for (const [u, w] of [[-half, -half], [-half, half], [half, -half], [half, half]]) {
+    const cx = x + c * u + s * w - island.position[0]
+    const cz = z - s * u + c * w - island.position[2]
+    if (!topFaceContains(ground.geometry, cx / scale, cz / scale)) return false
+  }
+  return true
 }
 
 function tubeFromPoints(points: THREE.Vector3[], radius: number, segments: number) {
@@ -219,8 +253,22 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     // with `size`, or a short axis would lose most of its landing.
     const insetA = islandInset(rimA)
     const insetB = islandInset(rimB)
-    const ea = Math.max(0, rimA - insetA)
-    const eb = Math.max(0, rimB - insetB)
+    // …then further in while a handrail post at that end would stand past the
+    // rim — the short side of the stretched platform curves away faster than
+    // a straight inset allows for.
+    const side = new THREE.Vector3(-hz, 0, hx) // across the bridge
+    const postsFit = (island: Island, ground: Ground, x: number, z: number) =>
+      [-1, 1].every((s) =>
+        footprintFits(island, ground, x + side.x * (WALKWAY / 2) * s, z + side.z * (WALKWAY / 2) * s, 0, POST_THICK / 2),
+      )
+    let ea = Math.max(0, rimA - insetA)
+    while (ea > 0 && !postsFit(a, groundA, a.position[0] + hx * ea, a.position[2] + hz * ea)) {
+      ea = Math.max(0, ea - ENDPOINT_STEP)
+    }
+    let eb = Math.max(0, rimB - insetB)
+    while (eb > 0 && !postsFit(b, groundB, b.position[0] - hx * eb, b.position[2] - hz * eb)) {
+      eb = Math.max(0, eb - ENDPOINT_STEP)
+    }
     const A = new THREE.Vector3(a.position[0] + hx * ea, a.position[1], a.position[2] + hz * ea)
     const B = new THREE.Vector3(b.position[0] - hx * eb, b.position[1], b.position[2] - hz * eb)
     const dx = B.x - A.x
@@ -240,7 +288,11 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     //     island level (walkable, no clipping into the base);
     //   • parabola in the middle → it hangs naturally, like a real rope bridge.
     const L = Math.hypot(horiz, dy) || 1
-    const flat = THREE.MathUtils.clamp(((insetA + insetB) / 2) / L, 0.04, 0.2) // flat fraction per end
+    // How far each end actually runs onto its island (more than the inset where
+    // the posts pushed it further in), so the droop never starts over ground.
+    const landA = rimA - ea
+    const landB = rimB - eb
+    const flat = THREE.MathUtils.clamp(((landA + landB) / 2) / L, 0.04, 0.2) // flat fraction per end
     const sagProfile = (t: number) => {
       if (t <= flat || t >= 1 - flat) return 0
       const u = (t - flat) / (1 - 2 * flat)
@@ -312,11 +364,30 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     // corner. Falls out to 45 degrees on the diagonal bridges.
     const pillarYaw = Math.atan2(dx, dz)
     const pillarOut = half + PILLAR_CLEAR
+    const pillarHalf = (Math.max(pillar.size.x, pillar.size.z) * pillarScale) / 2
+    // The pair at one end, stepped back `inward` (toward that island's centre)
+    // until both stand fully on its top face. Stays put if it never fits.
+    const pillarPair = (
+      P: THREE.Vector3,
+      island: Island,
+      ground: Ground,
+      inward: number,
+    ): [number, number, number][] => {
+      const at = (back: number): [number, number, number][] =>
+        [-1, 1].map((side) => [
+          P.x + across.x * pillarOut * side + hx * inward * back,
+          P.y - PILLAR_SINK,
+          P.z + across.z * pillarOut * side + hz * inward * back,
+        ])
+      for (let back = 0; back <= PILLAR_PULLBACK_MAX; back += PILLAR_PULLBACK_STEP) {
+        const pair = at(back)
+        if (pair.every(([x, , z]) => footprintFits(island, ground, x, z, pillarYaw, pillarHalf))) return pair
+      }
+      return at(0)
+    }
     const pillars: [number, number, number][] = [
-      [A.x - across.x * pillarOut, A.y - PILLAR_SINK, A.z - across.z * pillarOut],
-      [A.x + across.x * pillarOut, A.y - PILLAR_SINK, A.z + across.z * pillarOut],
-      [B.x - across.x * pillarOut, B.y - PILLAR_SINK, B.z - across.z * pillarOut],
-      [B.x + across.x * pillarOut, B.y - PILLAR_SINK, B.z + across.z * pillarOut],
+      ...pillarPair(A, a, groundA, -1), // island a is behind A
+      ...pillarPair(B, b, groundB, 1), // island b is beyond B
     ]
 
     // ── Ropes ─────────────────────────────────────────────────────────────────
@@ -420,7 +491,7 @@ export function RopeBridge({ a, b }: { a: Island; b: Island }) {
     ropeGeoms.forEach((g) => g.dispose())
 
     return { planks, posts, pillars, pillarYaw, ropes, segments }
-  }, [a, b, groundA, groundB, plankDepth])
+  }, [a, b, groundA, groundB, plankDepth, pillar, pillarScale])
 
   return (
     <group>
