@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { Stars } from '@react-three/drei'
 import { EffectComposer, Bloom, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { Physics } from '@react-three/rapier'
@@ -9,7 +8,7 @@ import { CameraRig } from '../components/CameraRig'
 import { Island } from '../components/Island'
 import { RopeBridge } from '../components/RopeBridge'
 import { WorldBorder } from '../components/WorldBorder'
-import { SkyDome } from '../components/SkyDome'
+import { SkyDome, SkyStars } from '../components/SkyDome'
 import { CloudLayer } from '../components/CloudLayer'
 import { Aurora } from '../components/Aurora'
 import { content } from '../content'
@@ -84,7 +83,7 @@ export function Experience() {
       <Suspense fallback={null}>
         {/* Night sky: gradient dome + starfield */}
         <SkyDome />
-        <Stars radius={220} depth={60} count={6000} factor={5} saturation={0} fade speed={0.4} />
+        <SkyStars />
         {/* Cloud sea far below the islands for a sense of depth */}
         <CloudLayer />
         {/* Drifting aurora curtains — the main source of colour in the sky.

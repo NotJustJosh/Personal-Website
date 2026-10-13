@@ -1,5 +1,6 @@
+import { useLayoutEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { GradientTexture } from '@react-three/drei'
+import { GradientTexture, Stars } from '@react-three/drei'
 
 // A big gradient dome enclosing the world as a night sky: dark at the zenith and
 // nadir with a faint navy glow near the horizon. `fog={false}` keeps it crisp —
@@ -18,4 +19,23 @@ export function SkyDome() {
       </meshBasicMaterial>
     </mesh>
   )
+}
+
+/**
+ * The starfield, above the horizon only. drei scatters stars over a whole
+ * sphere; the ones below the horizon used to be hidden by an opaque plane under
+ * the cloud sea, which also cut hard lines through the clouds (see
+ * CloudLayer.tsx). Zeroing their size hides them without thinning the sky.
+ */
+export function SkyStars() {
+  const ref = useRef<THREE.Points>(null)
+  useLayoutEffect(() => {
+    const geometry = ref.current?.geometry
+    const pos = geometry?.attributes.position
+    const size = geometry?.attributes.size
+    if (!pos || !size) return
+    for (let i = 0; i < pos.count; i++) if (pos.getY(i) < 0) size.setX(i, 0)
+    size.needsUpdate = true
+  }, [])
+  return <Stars ref={ref} radius={220} depth={60} count={6000} factor={5} saturation={0} fade speed={0.4} />
 }
