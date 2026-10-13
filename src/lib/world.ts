@@ -1,8 +1,6 @@
 import { content } from '../content'
 import type { Island, IslandId, PanelContent } from '../content'
 import { ISLAND, ORBIT } from '../config'
-import { coverImage } from './media'
-import type { ResolvedImage } from './media'
 
 // Derived, read-only helpers computed FROM the data in content.ts. Nothing here
 // is island-specific — add islands by editing content.ts only.
@@ -121,8 +119,8 @@ export interface IslandItem {
   short?: string
   /** Short glyph for the orbiting icon (defaults to the item number). */
   icon: string
-  /** Cover image (the first of a project's `images`), floated as a 3D preview. */
-  image?: ResolvedImage
+  /** A .glb in /public floated above the item (projects' `model`). */
+  model?: string
 }
 
 /** Normalized list of an island's interactable items. */
@@ -135,7 +133,7 @@ export function islandItems(island: Island): IslandItem[] {
       label: p.name,
       short: p.short,
       icon: p.icon ?? String(i + 1),
-      image: coverImage(p.images) ?? undefined,
+      model: p.model,
     }))
   }
   if (c.links?.length) {

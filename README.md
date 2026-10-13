@@ -234,20 +234,34 @@ or to an island's `content` for photos that aren't tied to one project:
 
 That one array gives you, with no other changes:
 
-- a **small framed preview** of the first image floating above that project's orbiting
-  icon out in the 3D world (island view),
+- a **cover thumbnail** (the first image) beside the project's title,
 - a **thumbnail strip** on the project card in the 3D panel (the plain page shows each
   image large, with its caption),
 - a **full-size gallery** when you click any thumbnail — `←`/`→` to page through,
   captions, an optional link out, `Esc` to close.
 
 Notes:
-- The **first** image is the cover (the 3D preview + lead thumbnail). Reorder to change it.
+- The **first** image is the cover (the lead thumbnail). Reorder to change it.
 - Paths follow the same rules as links: a file in `/public` (`images/foo.jpg`) or a full
   `https://…` URL. Local files get the GitHub Pages base path automatically.
-- Cover images are downloaded the first time you **set foot on that island**, not at
-  page load — so keep them modest (~800px) or supply a small `thumb`.
-- Preview size in the 3D world: `ORBIT.PREVIEW_*` in [`src/config.ts`](src/config.ts).
+
+### Give an orbiting item its own 3D marker
+
+Each project orbits its island as a small glowing gem. Give it a `model` and that model
+takes the gem's place, in the same glowing material (the island's color, brighter when
+you walk up to it):
+
+```ts
+{ name: 'IMU-Based Hand Gesture Interface…', model: 'models/gloves.glb', … }
+```
+
+- Model it as a **flat silhouette, extruded a little, lying flat** (drawn in Blender's
+  top view). It's stood up to face the camera and scaled to fit
+  `ORBIT.MODEL_WIDTH/HEIGHT` in [`src/config.ts`](src/config.ts).
+- The same file can mark several items (the spider marks both the robot and the
+  course-assistant role).
+- The models are fetched with the rest of the world, so they never pop in late. A
+  missing or broken file just shows the gem instead.
 
 ### Photos: originals vs. what ships
 

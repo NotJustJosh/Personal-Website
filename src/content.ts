@@ -117,15 +117,19 @@
 //    ]
 //
 //  What you get for free:
-//    • the FIRST image floats as a small framed preview above that project's
-//      orbiting icon in the 3D world (island view),
+//    • the FIRST image is the cover thumbnail beside the project's title,
 //    • a thumbnail strip on the project card in the 3D panel; clicking any
 //      thumbnail opens a full-size gallery with ←/→ arrows, captions, and Esc
 //      to close (the plain page shows them large, one per figure),
 //    • island-level `content.images` for photos that aren't tied to one project.
 //
-//  Keep previews small (~800px wide, compressed) — every cover image is fetched
-//  the first time you set foot on that island.
+//  ─── A 3D MARKER FOR AN ORBITING ITEM ──────────────────────────────────────
+//  Give a project `model: 'models/foo.glb'` and that model orbits the island
+//  in place of the item's glowing gem, in the same glowing material (the
+//  island's accent color, brighter when you walk up to it). Model it as a flat
+//  silhouette, extruded a little, lying flat — it's stood up to face the camera
+//  and scaled to fit ORBIT.MODEL_WIDTH/HEIGHT. The same file can mark several
+//  items.
 //
 //  ─── HOW TO ADD A LOOPING VIDEO ────────────────────────────────────────────
 //  For things better shown moving. Drop the clip in public/videos/, then give
@@ -244,8 +248,8 @@ export interface Project {
   links?: LinkItem[]
   /**
    * Screenshots, photos, paper/article previews… The FIRST image doubles as the
-   * cover: it's the small preview that floats over this item in the 3D world and
-   * the thumbnail shown on the card. Clicking any thumbnail opens the gallery.
+   * cover thumbnail shown beside the card's title. Clicking any thumbnail opens
+   * the gallery.
    */
   images?: Media[]
   /**
@@ -255,6 +259,12 @@ export interface Project {
   video?: Video
   /** Optional short glyph (letter/number/symbol) for the orbiting icon. */
   icon?: string
+  /**
+   * A .glb in /public (e.g. 'models/gloves.glb') that orbits the island in
+   * place of this item's gem, in the gem's glowing material. A flat, lightly
+   * extruded silhouette modelled lying flat works best.
+   */
+  model?: string
 
   // ── Plain-page write-up (projects/) ─────────────────────────────────────
   // Everything below is read ONLY by the plain page; the 3D panels ignore it.
@@ -632,7 +642,7 @@ export const content: SiteContent = {
           {
             title: 'Getting around',
             only: '3d',
-            body: ['You control the little blue capsule.'],
+            body: ['You control the icosahedron.'],
             keys: [
               { keys: ['W', 'A', 'S', 'D'], label: 'Walk (arrow keys work too)' },
               { keys: ['Space'], label: 'Jump' },
@@ -679,6 +689,7 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'IMU-Based Hand Gesture Interface for 3D Design and Modeling',
+            model: 'models/gloves.glb',
             short: 'IMU Hand Gesture Interface for CAD',
             date: 'August 2025 - Present',
             description:
@@ -726,6 +737,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Deployable Solar Array for Small Satellites',
+            model: 'models/cubesat.glb',
             id: 'solar-array',
             short: 'Satellite Solar Array',
             date: 'September 2025 - May 2026',
@@ -739,6 +751,7 @@ export const content: SiteContent = {
           },
           {
             name: 'License Plate OCR Model',
+            model: 'models/licenseplate.glb',
             id: 'ocr',
             date: 'May 2026 - June 2026',
             description:
@@ -750,6 +763,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Terasic Spider Robot: Embedded Systems',
+            model: 'models/spider.glb',
             id: 'spider-robot',
             short: 'Spider Robot',
             date: 'May 2026 - June 2026',
@@ -770,6 +784,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Automation of Dechlorination Tools for Aqua Pennsylvania',
+            model: 'models/aqua.glb',
             id: 'aqua',
             short: 'Dechlorination Automation Tool',
             date: 'August 2024 - May 2025',
@@ -782,6 +797,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Publication: Hide and Seek: A Multimodal Approach to Human Detection',
+            model: 'models/Spy-vs-AI-spy.glb',
             id: 'hide-and-seek',
             short: 'Human Detection through Facial Recognition Software',
             date: 'July 2024',
@@ -819,6 +835,7 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'Research Assistant: Microscale Acoustic and Photonic Systems Laboratory, Northeastern University',
+            model: 'models/MAPS.glb',
             id: 'maps-lab',
             short: 'MAPS Lab',
             date: 'Sep 2025 \– Present',
@@ -833,6 +850,8 @@ export const content: SiteContent = {
                 caption: 'Logo for the Microscale Acoustic and Photonic Systems Laboratory' },
               { src: 'images/MAPS-team.jpg',
               caption: 'The MAPS Team'},
+              { src: 'images/maps-microscope.png', alt: '',
+                caption: 'MAPS microscope' },
             ],
             links: [
               { label: 'MAPS Website', url: 'https://sites.google.com/view/mapslab' },
@@ -840,6 +859,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Hourly Course Assistant (HCA): EECE2160 Embedded Design: Enabling Robotics, Northeastern University',
+            model: 'models/spider.glb',
             id: 'ta-eece2160',
             short: 'Embedded Design Course Assistant',
             date: 'Sep 2026 - Present',
@@ -858,6 +878,7 @@ export const content: SiteContent = {
           },
           {
             name: 'Electrical Team Deputy, Solar Array Project Electrical Lead: NEU Satellite Labs',
+            model: 'models/cubesat.glb',
             id: 'nsl',
             short: 'NEU Satellite Labs',
             date: 'Sep 2025 - May 2026',

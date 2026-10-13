@@ -7,25 +7,23 @@ import { getIsland } from '../lib/world'
 import { VISUALS } from '../config'
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  The player: a glass icosahedron holding a churning ember of fog/fire, drifting
-//  above the ground and trailing a soft misty plume.
+//  The player: a glowing icosahedron — the same glowing material as the cubes
+//  on the island pedestals (Waypoint.tsx) — drifting above the ground and
+//  trailing a soft misty plume.
 //
-//  The core and the plume both take the accent colour of whatever island you're
-//  standing on and ease between them, so the avatar tells you which section
-//  you're in. Off-island it keeps the last colour rather than going grey.
+//  The shell and the plume both take the accent colour of whatever island
+//  you're standing on and ease between them, so the avatar tells you which
+//  section you're in. Off-island it keeps the last colour rather than going grey.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODEL = 'models/player.glb'
-const SHELL_SIZE = 0.95 // outer glass shell (the player capsule is 1.8 tall)
-const CORE_SIZE = 0.34 // radius of the churning fog/fire volume
-const EMBER_SIZE = 0.11 // the hard bright bead at its heart
+const SHELL_SIZE = 0.95 // the icosahedron's height (the player capsule is 1.8 tall)
 const FLOAT_HEIGHT = 0.15
 const BOB_AMP = 0.09
 const BOB_SPEED = 1.6
 const SPIN_SPEED = 0.35
 const COLOR_LERP = 2.5
 const FALLBACK = '#8ecae6'
-const WHITE = new THREE.Color('#ffffff')
 
 // ── Misty plume ──────────────────────────────────────────────────────────────
 // Tail length is set by PUFF_LIFE; DENSITY is set by how many go out per frame.
@@ -40,68 +38,6 @@ const PUFF_DRIFT = 0.35 // upward drift as puffs age
 const PUFF_ALPHA = 0.32 // per-puff strength; they stack, so keep each one soft
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-const CORE_VERT = /* glsl */ `
-  varying vec3 vPos;
-  void main() {
-    vPos = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
-
-// Churning 3D noise, hot in the middle and fading to nothing at the rim, so it
-// reads as fire/fog suspended inside the shell rather than a solid object.
-const CORE_FRAG = /* glsl */ `
-  uniform float uTime;
-  uniform vec3  uColor;
-  uniform float uRadius;
-  varying vec3 vPos;
-
-  float hash(vec3 p) {
-    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
-  }
-
-  float noise(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    vec3 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), u.x),
-          mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), u.x), u.y),
-      mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), u.x),
-          mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), u.x), u.y),
-      u.z
-    );
-  }
-
-  float fbm(vec3 p) {
-    float v = 0.0, a = 0.5;
-    for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.05; a *= 0.5; }
-    return v;
-  }
-
-  void main() {
-    vec3 p = vPos / uRadius;
-    float r = length(p);
-
-    // Rising, swirling noise — the flame licks upward and rotates slowly.
-    vec3 q = p * 2.6;
-    q.y -= uTime * 0.55;
-    q.xz *= mat2(cos(uTime * 0.3), -sin(uTime * 0.3), sin(uTime * 0.3), cos(uTime * 0.3));
-    float n = fbm(q);
-
-    // Soft radial falloff: dense at the heart, gone by the shell.
-    float body = smoothstep(1.0, 0.15, r);
-    float density = pow(clamp(n * 1.5, 0.0, 1.0), 1.4) * body;
-
-    // White-hot heart bleeding out into the island's accent colour.
-    vec3 col = mix(uColor, vec3(1.0), smoothstep(0.45, 0.0, r) * 0.85);
-    col = mix(col * 0.6, col, density);
-
-    float a = density * 1.5;
-    gl_FragColor = vec4(col * a, a);
-  }
-`
 
 const PUFF_VERT = /* glsl */ `
   attribute float aAge;   // 0 = just born, 1 = fully faded
@@ -145,54 +81,22 @@ export function PlayerAvatar() {
   const scale = SHELL_SIZE / Math.max(size.y, 1e-3)
 
   const shell = useRef<THREE.Group>(null)
-  const core = useRef<THREE.Group>(null)
   const light = useRef<THREE.PointLight>(null)
-  const emberMat = useRef<THREE.MeshBasicMaterial>(null)
   const points = useRef<THREE.Points>(null)
 
   const current = useMemo(() => new THREE.Color(FALLBACK), [])
   const target = useMemo(() => new THREE.Color(FALLBACK), [])
   const lastIsland = useRef<string | null>(null)
 
-  const highQuality = useGame((s) => s.quality) === 'high'
-
-  const glass = useMemo(() => {
-    if (!highQuality) {
-      return new THREE.MeshStandardMaterial({
-        color: '#cfe4ff',
-        transparent: true,
-        opacity: 0.3,
-        roughness: 0.15,
-        metalness: 0,
-      })
-    }
-    return new THREE.MeshPhysicalMaterial({
-      color: '#ffffff',
-      transmission: 1,
-      thickness: 0.55,
-      ior: 1.45,
-      roughness: 0.08,
-      metalness: 0,
-      transparent: true,
-      clearcoat: 1,
-      clearcoatRoughness: 0.1,
-    })
-  }, [highQuality])
-
-  const coreMat = useMemo(
+  // Same as the pedestal cubes: the island's color, glowing through the bloom.
+  // Its color is eased each frame below.
+  const shellMat = useMemo(
     () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uColor: { value: new THREE.Color(FALLBACK) },
-          uRadius: { value: CORE_SIZE },
-        },
-        vertexShader: CORE_VERT,
-        fragmentShader: CORE_FRAG,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
+      new THREE.MeshStandardMaterial({
+        color: FALLBACK,
+        emissive: FALLBACK,
+        emissiveIntensity: VISUALS.EMISSIVE.marker,
+        roughness: 0.3,
         toneMapped: false,
       }),
     [],
@@ -246,12 +150,10 @@ export function PlayerAvatar() {
       if (island) target.set(island.accentColor)
     }
     current.lerp(target, 1 - Math.exp(-COLOR_LERP * delta))
-    coreMat.uniforms.uColor.value.copy(current)
+    shellMat.color.copy(current)
+    shellMat.emissive.copy(current)
     puffMat.uniforms.uColor.value.copy(current)
-    coreMat.uniforms.uTime.value = t
     if (light.current) light.current.color.copy(current)
-    // The bead runs hotter than the accent so it stays legible on any backdrop.
-    if (emberMat.current) emberMat.current.color.copy(current).lerp(WHITE, 0.65)
 
     const y = FLOAT_HEIGHT + Math.sin(t * BOB_SPEED) * BOB_AMP
     if (shell.current) {
@@ -259,7 +161,6 @@ export function PlayerAvatar() {
       shell.current.rotation.y = t * SPIN_SPEED
       shell.current.rotation.x = Math.sin(t * 0.4) * 0.25
     }
-    if (core.current) core.current.position.y = y
     if (light.current) light.current.position.y = y
 
     // ── Plume ────────────────────────────────────────────────────────────────
@@ -306,20 +207,7 @@ export function PlayerAvatar() {
   return (
     <group>
       <group ref={shell}>
-        <mesh geometry={geometry} scale={scale} material={glass} castShadow />
-      </group>
-
-      {/* Churning ember suspended inside the shell. The noise cloud alone reads
-          as fog and can wash out against a bright sky, so a small opaque
-          white-hot bead sits at the very centre to anchor it. */}
-      <group ref={core}>
-        <mesh material={coreMat}>
-          <icosahedronGeometry args={[CORE_SIZE, 4]} />
-        </mesh>
-        <mesh>
-          <icosahedronGeometry args={[EMBER_SIZE, 2]} />
-          <meshBasicMaterial ref={emberMat} toneMapped={false} />
-        </mesh>
+        <mesh geometry={geometry} scale={scale} material={shellMat} castShadow />
       </group>
 
       <pointLight ref={light} intensity={VISUALS.EMISSIVE.marker} distance={6} decay={2} />

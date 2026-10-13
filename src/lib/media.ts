@@ -39,14 +39,6 @@ export function resolveImages(list?: Media[]): ResolvedImage[] {
     }))
 }
 
-/**
- * The cover image — the first entry. It's what floats above the item's orbiting
- * icon in the 3D world. Reorder `images` in content.ts to pick a different one.
- */
-export function coverImage(list?: Media[]): ResolvedImage | null {
-  return resolveImages(list)[0] ?? null
-}
-
 export interface ResolvedVideo {
   /** Clip URL, ready to drop into a src attribute. */
   src: string
