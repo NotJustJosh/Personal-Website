@@ -60,8 +60,9 @@ export const VISUALS = {
 
   /** Emissive strengths. These are what actually glow through the bloom pass. */
   EMISSIVE: {
-    /** The spinning cube on each pedestal. */
-    marker: 4.5,
+    /** The spinning cube on each pedestal (and the player's shell, which matches
+     *  it). Low enough that its edges still read through the bloom. */
+    marker: 2.5,
     /** The orbiting project icons: resting, and when you're next to one. */
     itemIdle: 3.0,
     itemSelected: 6.5,

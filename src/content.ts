@@ -265,6 +265,13 @@ export interface Project {
    * extruded silhouette modelled lying flat works best.
    */
   model?: string
+  /**
+   * Dim the model's BACKING piece — the part furthest back that raised details
+   * sit on (the MAPS triangle behind its laser symbol) — to this fraction of the
+   * resting glow, so the details read. It stays that dim when you walk up; only
+   * the details brighten. E.g. 0.4. Omit for an even glow.
+   */
+  modelBackingGlow?: number
 
   // ── Plain-page write-up (projects/) ─────────────────────────────────────
   // Everything below is read ONLY by the plain page; the 3D panels ignore it.
@@ -836,14 +843,17 @@ export const content: SiteContent = {
           {
             name: 'Research Assistant: Microscale Acoustic and Photonic Systems Laboratory, Northeastern University',
             model: 'models/MAPS.glb',
+            // Dim the triangle so the laser symbol raised on it reads.
+            modelBackingGlow: 0.4,
             id: 'maps-lab',
             short: 'MAPS Lab',
             date: 'Sep 2025 \– Present',
-            description: `- Developing shot-noise limited Michelson Interferometer to allow for better 
+            description: `- Developing single-shot Michelson Interferometer to allow for better 
             characterization of microelectromechanical systems (MEMS). \n - Designed & assembled 
-            high-magnification optical system to assist in the characterization of MEMS devices in a cryogenic vacuum probe station 
+            $6,000 high-magnification optical system to assist in the characterization of MEMS devices in a cryogenic vacuum probe station 
             \n - Updated and redesigned MATLAB program which calculates displacement of MEMS devices in a Michelson Interferometer under the quadrature condition 
-            using the signal-to-noise ratio calculated using experimental parameters from a spectrum analyzer, photodetector, and an oscilloscope.`,
+            using the signal-to-noise ratio calculated using experimental parameters from a spectrum analyzer, photodetector, and an oscilloscope.
+            \n - Learning Ansys Lumerical Software to assist in work simulating MEMS`,
             tags: [],
             images: [
               { src: 'images/maps.png',
@@ -863,11 +873,13 @@ export const content: SiteContent = {
             id: 'ta-eece2160',
             short: 'Embedded Design Course Assistant',
             date: 'Sep 2026 - Present',
-            description: `- Working as a paid assistant (10 hrs/wk) for the electrical engineering fundamental
+            description: `- Working as a paid assistant (15 hrs/wk) for the electrical engineering fundamental
             introducing students to embedded design, field-programmable gate arrays, and other related skills 
-            \n - Primarily assisted students by giving feedback and checking work during their 
+            \n - Primarily assist students by giving feedback and checking work during their 
             allotted lab times and open lab hours, 
-            hosted additional online office hours for homework help, and graded homeworks and exams`,
+            hosted additional office hours for homework help, and graded homeworks and exams
+            \n - Sharpening communication skills and independence via office hours with no professor present; develop
+            relevent framework for effective communication and explanations to facilitate learning.`,
             // Plain page only — the line under the title.
             summary: 'Teaching assistant for EECE 2160 at Northeastern: FPGA/digital logic labs with Quartus and the DE1-SoC board.',
             images: [

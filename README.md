@@ -247,6 +247,10 @@ Notes:
 
 ### Give an orbiting item its own 3D marker
 
+Names stay out of the way: an item's name only pops up while you're next to it, and an
+island's own name only while you're at its pedestal. (A platform's district sign, like
+"My Work", always shows.)
+
 Each project orbits its island as a small glowing gem. Give it a `model` and that model
 takes the gem's place, in the same glowing material (the island's color, brighter when
 you walk up to it):
@@ -260,6 +264,10 @@ you walk up to it):
   `ORBIT.MODEL_WIDTH/HEIGHT` in [`src/config.ts`](src/config.ts).
 - The same file can mark several items (the spider marks both the robot and the
   course-assistant role).
+- Raised details on a backing piece (the MAPS laser symbol on its triangle) can get lost
+  in the glow. `modelBackingGlow: 0.4` dims the backing piece — the part furthest back,
+  found by geometry, so it works even when the model is one joined mesh — and only the
+  details brighten when you walk up.
 - The models are fetched with the rest of the world, so they never pop in late. A
   missing or broken file just shows the gem instead.
 

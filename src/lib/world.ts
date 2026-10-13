@@ -119,8 +119,10 @@ export interface IslandItem {
   short?: string
   /** Short glyph for the orbiting icon (defaults to the item number). */
   icon: string
-  /** A .glb in /public floated above the item (projects' `model`). */
+  /** A .glb in /public drawn in place of the item's gem (projects' `model`). */
   model?: string
+  /** Glow of that model's backing piece, as a fraction (projects' `modelBackingGlow`). */
+  modelBackingGlow?: number
 }
 
 /** Normalized list of an island's interactable items. */
@@ -134,6 +136,7 @@ export function islandItems(island: Island): IslandItem[] {
       short: p.short,
       icon: p.icon ?? String(i + 1),
       model: p.model,
+      modelBackingGlow: p.modelBackingGlow,
     }))
   }
   if (c.links?.length) {

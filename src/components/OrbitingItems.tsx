@@ -11,12 +11,12 @@ import { ItemModel } from './ItemModel'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Item markers that circle an island when you're standing on it. Each marker
-//  maps to one item (a project or a contact link) and shows that item's NAME
-//  above a glowing gem — or, if the project has a `model` in content.ts, that
-//  3D model in the gem's place, in the same glowing material. Walk up to one
-//  (Player.tsx picks the nearest within ORBIT.REACH) and it brightens + grows in
-//  the island's accent color; press E to open the panel focused on that item
-//  (where the full gallery lives).
+//  maps to one item (a project or a contact link): a glowing gem — or, if the
+//  project has a `model` in content.ts, that 3D model in the gem's place, in the
+//  same glowing material. Walk up to one (Player.tsx picks the nearest within
+//  ORBIT.REACH) and it brightens + grows in the island's accent color, and its
+//  NAME pops up above it — only that one's, so the rest stay uncluttered. Press
+//  E to open the panel focused on that item (where the full gallery lives).
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Dimmer than the centerpiece cube (emissiveIntensity 2.2 in Waypoint.tsx).
@@ -40,6 +40,7 @@ export function OrbitingItems({ island }: { island: Island }) {
   const items = islandItems(island)
   const radius = orbitRadius(island)
   const groupRefs = useRef<(THREE.Group | null)[]>([])
+  const labelRefs = useRef<(THREE.Group | null)[]>([])
 
   // One glowing material per item, shared by its gem or its model, so the
   // highlight below brightens whichever marker it has.
@@ -80,6 +81,10 @@ export function OrbitingItems({ island }: { island: Island }) {
 
       // Highlight = the island's own color, just brighter (no separate hue).
       materials[i].emissiveIntensity = selected ? SELECTED_GLOW : BASE_GLOW
+
+      // The name only shows for the item you're next to; it grows in and out.
+      const label = labelRefs.current[i]
+      if (label) label.scale.setScalar(THREE.MathUtils.lerp(label.scale.x, selected ? 1 : 0, 0.2))
     }
   })
 
@@ -100,9 +105,19 @@ export function OrbitingItems({ island }: { island: Island }) {
             }}
             scale={0}
           >
-            {item.model ? <ItemModel path={item.model} material={materials[i]} fallback={gem} /> : gem}
-            {/* name label above, always facing the camera */}
-            <Billboard position={[0, 0.85, 0]}>
+            {item.model ? (
+              <ItemModel path={item.model} material={materials[i]} backingGlow={item.modelBackingGlow} fallback={gem} />
+            ) : (
+              gem
+            )}
+            {/* name label above, always facing the camera — only while selected */}
+            <Billboard
+              ref={(el) => {
+                labelRefs.current[i] = el
+              }}
+              position={[0, 0.85, 0]}
+              scale={0}
+            >
               <Text
                 fontSize={0.34}
                 maxWidth={7}
