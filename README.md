@@ -1,9 +1,10 @@
 # 3D Personal Portfolio — Floating Islands
 
-An explorable, single-player **open-world style** personal site: a world of **floating
-islands in a soft pale void**, connected by light-bridges. Walk a character across the
-islands, step onto one, and press **E** to open a clean HTML panel with that section's
-content. The entire world is **data-driven from one file** (`src/content.ts`). Phones,
+This is my attempt at creating an interesting and interactive portfolio to showcase
+the work I've done over the past few years. Walk around, take a look at projects, and explore!
+If all of this isn't for you, open up the plaintext view and get the important info fast.
+
+The entire world is **data-driven from one file** (`src/content.ts`). Phones,
 and browsers that can't run the 3D scene, get a fast **plain page** (`projects/`) built
 from the same file. It builds to static files and deploys to **GitHub Pages**.
 
