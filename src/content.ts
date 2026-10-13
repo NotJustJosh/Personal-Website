@@ -660,10 +660,10 @@ export const content: SiteContent = {
     },
 
     // ── Showcase platform ────────────────────────────────────────────────────
-    // Pure scenery: one big landmass that carries the Projects, Experience and
-    // Honors pedestals (`platform: true` → no pedestal, no panel, hidden from
-    // the fast-travel menu). The bridges to/from this whole
-    // area hang off THIS entry, not off the three sections standing on it.
+    // Pure scenery: one big landmass that carries the Projects and Experience
+    // pedestals (`platform: true` → no pedestal, no panel, hidden from the
+    // fast-travel menu). The bridges to/from this whole area hang off THIS
+    // entry, not off the two sections standing on it.
     {
       id: 'showcase',
       label: 'My Work',
@@ -673,7 +673,7 @@ export const content: SiteContent = {
       platform: true,
       groundModel: 'models/xscaledisland.glb',
       groundRotation: 90,
-      neighbors: ['about', 'resources', 'contact'],
+      neighbors: ['about', 'resources', 'contact', 'honors'],
       content: {},
     },
 
@@ -682,9 +682,11 @@ export const content: SiteContent = {
       id: 'projects',
       label: 'Projects',
       // On the Showcase platform (same y), left-hand pedestal as you arrive.
-      // The three pedestals sit in a row at z = 38.25; see Honors for the reason
-      // |x| stops at 9.5.
-      position: [9.5, 3, 42],
+      // The two pedestals sit either side of the platform's centre at x = ±6.
+      // 12 apart keeps their interaction zones (size + 1 = 5.5 each) from
+      // overlapping, so standing at one never selects the other. (The widest
+      // they could go is ~±10.5: the platform is radius 15 along X.)
+      position: [6, 3, 42],
       accentColor: ZONE_ACCENTS.projects,
       size: 4.5,
       onPlatform: true,
@@ -830,7 +832,7 @@ export const content: SiteContent = {
       id: 'experience',
       label: 'Experience',
       // On the Showcase platform, right-hand pedestal as you arrive.
-      position: [-9.5, 3, 42],
+      position: [-6, 3, 42],
       accentColor: ZONE_ACCENTS.experience,
       size: 4.5,
       onPlatform: true,
@@ -960,18 +962,11 @@ export const content: SiteContent = {
     {
       id: 'honors',
       label: 'Honors',
-      // On the Showcase platform, centre pedestal of the row of three.
-      //
-      // All three share z = 38.25 and spread to x = +9.5 / 0 / -9.5. That's about
-      // as wide as the row can go: the platform is radius 15 centred at z = 42,
-      // so a size-4.5 pedestal has to stay within 10.5 of that centre, and at
-      // this z that caps |x| at ~9.8. The 9.5 spacing does leave the pedestals'
-      // interaction zones (size + 1) slightly overlapping, but Player.tsx picks
-      // the NEAREST island in range, so standing on one always selects it.
-      position: [0, 3, 42],
+      // Its own island behind the Showcase platform, in the middle of the back
+      // row between Resources and Contact (same height), bridged straight to
+      // the platform (that bridge is listed on `showcase`).
+      position: [0, 5, 68],
       accentColor: ZONE_ACCENTS.honors,
-      size: 4.5,
-      onPlatform: true,
       neighbors: [],
       // Honors is a compact list: names + dates only (no descriptions, no body).
       content: {
