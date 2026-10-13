@@ -9,7 +9,8 @@
 //    • makes it a valid fall-respawn target,
 //    • generates light-bridges to the ids listed in its `neighbors`,
 //    • wires its interaction zone + content panel,
-//    • adds it to the Classic-view page + its nav menu.
+//    • (projects / experience / about / honors / resources also feed the
+//      plain page at projects/ — see `plainPage` at the bottom).
 //
 //  ─── HOW TO ADD A NEW ISLAND ───────────────────────────────────────────────
 //  Append an object to `islands`:
@@ -86,8 +87,9 @@
 //  Title and subtitle always render ABOVE the image. `hero: true` makes the
 //  title extra-large + full-width — use it on the opening slide.
 //  Navigate with the on-screen arrows, the dots, or the ← / → keys.
-//  `only: '3d'` hides a slide in Classic view (and `only: 'classic'` vice
-//  versa) — use it for the walk-around tutorial, which means nothing in 2D.
+//  `only: '3d'` keeps a slide out of the plain page (projects/), which shows
+//  the deck as headed paragraphs — use it for the walk-around tutorial, which
+//  means nothing in 2D. `only: 'plain'` does the reverse.
 //  Slides REPLACE the island's `body` + `images`; `groups`, `projects` and
 //  `links` still render underneath.
 //
@@ -115,15 +117,19 @@
 //    ]
 //
 //  What you get for free:
-//    • the FIRST image floats as a small framed preview above that project's
-//      orbiting icon in the 3D world (island view),
-//    • a thumbnail strip on the project card in BOTH the 3D panel and the
-//      Classic 2D view; clicking any thumbnail opens a full-size gallery with
-//      ←/→ arrows, captions, and Esc to close,
+//    • the FIRST image is the cover thumbnail beside the project's title,
+//    • a thumbnail strip on the project card in the 3D panel; clicking any
+//      thumbnail opens a full-size gallery with ←/→ arrows, captions, and Esc
+//      to close (the plain page shows them large, one per figure),
 //    • island-level `content.images` for photos that aren't tied to one project.
 //
-//  Keep previews small (~800px wide, compressed) — every cover image is fetched
-//  the first time you set foot on that island.
+//  ─── A 3D MARKER FOR AN ORBITING ITEM ──────────────────────────────────────
+//  Give a project `model: 'models/foo.glb'` and that model orbits the island
+//  in place of the item's glowing gem, in the same glowing material (the
+//  island's accent color, brighter when you walk up to it). Model it as a flat
+//  silhouette, extruded a little, lying flat — it's stood up to face the camera
+//  and scaled to fit ORBIT.MODEL_WIDTH/HEIGHT. The same file can mark several
+//  items.
 //
 //  ─── HOW TO ADD A LOOPING VIDEO ────────────────────────────────────────────
 //  For things better shown moving. Drop the clip in public/videos/, then give
@@ -138,6 +144,15 @@
 //  so any audio track is ignored. Keep clips to 3-8 seconds and a few MB; they
 //  load with the card, and Pages caps a single file at 100 MB. Anyone with
 //  "reduce motion" set gets a paused frame plus controls instead.
+//  (On the plain page the same clip gets controls and never autoplays.)
+//
+//  ─── THE PLAIN PAGE (projects/) ────────────────────────────────────────────
+//  This file also feeds a plain-HTML version of the site at projects/, built
+//  without three.js. Projects there take extra write-up fields (`summary`,
+//  `problem`, `hardPart`, `scope`, `decisions`, `results`, `rev2` — see the
+//  Project interface); the 3D panels ignore them. Blank ones don't render, and
+//  `npm run dev` / `npm run build` print the list of what's still blank.
+//  Order and plain-page-only entries: `plainPage`, at the very bottom.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ZONE_ACCENTS } from './config'
@@ -177,6 +192,11 @@ export interface LinkItem {
 export interface MediaItem {
   /** Full-size image: a file in /public (e.g. 'images/foo.jpg') or a full URL. */
   src: string
+  /**
+   * What the image shows, for screen readers. The plain page needs it; until
+   * it's written the caption stands in, and the build lists it as empty.
+   */
+  alt?: string
   /** Caption shown under the image in the gallery + lightbox. Doubles as alt text. */
   caption?: string
   /** Optional smaller file for thumbnails + the 3D preview. Defaults to `src`. */
@@ -228,8 +248,8 @@ export interface Project {
   links?: LinkItem[]
   /**
    * Screenshots, photos, paper/article previews… The FIRST image doubles as the
-   * cover: it's the small preview that floats over this item in the 3D world and
-   * the thumbnail shown on the card. Clicking any thumbnail opens the gallery.
+   * cover thumbnail shown beside the card's title. Clicking any thumbnail opens
+   * the gallery.
    */
   images?: Media[]
   /**
@@ -239,6 +259,49 @@ export interface Project {
   video?: Video
   /** Optional short glyph (letter/number/symbol) for the orbiting icon. */
   icon?: string
+  /**
+   * A .glb in /public (e.g. 'models/gloves.glb') that orbits the island in
+   * place of this item's gem, in the gem's glowing material. A flat, lightly
+   * extruded silhouette modelled lying flat works best.
+   */
+  model?: string
+  /**
+   * Dim the model's BACKING piece — the part furthest back that raised details
+   * sit on (the MAPS triangle behind its laser symbol) — to this fraction of the
+   * resting glow, so the details read. It stays that dim when you walk up; only
+   * the details brighten. E.g. 0.4. Omit for an even glow.
+   */
+  modelBackingGlow?: number
+
+  // ── Plain-page write-up (projects/) ─────────────────────────────────────
+  // Everything below is read ONLY by the plain page; the 3D panels ignore it.
+  // Blank fields don't render, so nothing half-written ships — and `npm run
+  // dev` / `npm run build` print every blank one so you know what's left.
+  // Evidence is this project's `images` + `video` above (shared with the 3D
+  // card), each image ideally with `alt` text.
+
+  /** Anchor on the plain page, for deep links: projects/#gloves. */
+  id?: string
+  /** One line: what it is. Shown right under the title. */
+  summary?: string
+  /** The problem it solves. Prose, same formatting rules as `description`. */
+  problem?: string
+  /** What made it hard. */
+  hardPart?: string
+  /** What you personally did. */
+  scope?: string
+  /** Design questions and your answers. A question with a blank answer is hidden. */
+  decisions?: Decision[]
+  /** What it achieved. */
+  results?: string
+  /** What you'd change in the next revision. */
+  rev2?: string
+}
+
+/** One design decision on the plain page: the question renders as a subheading. */
+export interface Decision {
+  question: string
+  answer: string
 }
 
 /** One row of a controls tutorial: some key caps and what they do. */
@@ -280,11 +343,12 @@ export interface Slide {
   /** Buttons at the bottom of the slide. */
   links?: LinkItem[]
   /**
-   * Limit this slide to one view. Tutorial slides about walking around only
-   * make sense in the 3D world, so mark those `only: '3d'`.
-   * Omit to show the slide in both views.
+   * Limit this slide to one view: the 3D world's panel, or the plain page
+   * (projects/), which shows the deck as ordinary headed paragraphs. Tutorial
+   * slides about walking around only make sense in 3D, so mark those
+   * `only: '3d'`. Omit to show the slide in both.
    */
-  only?: '3d' | 'classic'
+  only?: '3d' | 'plain'
 }
 
 /**
@@ -313,7 +377,7 @@ export interface ContentGroup {
   links?: LinkItem[]
 }
 
-/** Content shown in an island's panel (3D) and its Classic-view section (2D). */
+/** Content shown in an island's panel in the 3D world. */
 export interface PanelContent {
   title: string
   body?: string[]
@@ -357,14 +421,14 @@ export interface Island {
   /**
    * Scenery that HOLDS other islands. It renders ground, a collider and its
    * accent light, but no pedestal and no panel, and it's kept out of the
-   * fast-travel menu and the Classic view. Use it to put several sections on
+   * fast-travel menu. Use it to put several sections on
    * one landmass — see the "Showcase" island below.
    */
   platform?: boolean
   /**
    * This island SITS ON a platform: no ground or collider of its own (the
    * platform provides both), but it keeps its pedestal, label, orbiting items,
-   * panel, fast-travel entry and Classic-view section.
+   * panel and fast-travel entry.
    *
    * Give it the SAME `y` as its platform, and a `size` small enough that the
    * interaction zones of the pedestals sharing the platform don't overlap.
@@ -392,23 +456,125 @@ export interface Island {
   groundRotation?: number
 }
 
+/**
+ * The <title>, description and link-preview (Open Graph / Twitter) tags for one
+ * HTML page. These are baked into the raw HTML at build time, so they exist
+ * before any JavaScript runs — which is what link unfurlers and search engines
+ * read.
+ */
+export interface PageMeta {
+  /** Browser-tab and search-result title. */
+  title: string
+  /** Search-result snippet. */
+  description: string
+  /** Title on a pasted link's preview card (Slack, LinkedIn, iMessage…). */
+  ogTitle: string
+  /** Description on a pasted link's preview card. */
+  ogDescription: string
+  /** The page's public URL — becomes og:url and the canonical link. */
+  url: string
+}
+
+export interface SiteMeta {
+  /**
+   * Link-preview image, 1200×630. Must be an ABSOLUTE URL (preview bots don't
+   * resolve relative ones); drop the file in /public so it deploys there.
+   */
+  ogImage: string
+  /** The 3D world (index.html). */
+  home: PageMeta
+  /** The plain page (projects/index.html). */
+  plain: PageMeta
+}
+
+export interface Contact {
+  /** Bare address — links become mailto: automatically. */
+  email: string
+  github: string
+  linkedin: string
+}
+
+/**
+ * The plain page (projects/): a fast, no-WebGL version of the site, baked to
+ * static HTML at build time from this file. It reads these islands by id:
+ *   projects   → Projects (after `leadProjects`)
+ *   experience → Experience
+ *   about      → About (its slides, as headed paragraphs)
+ *   honors     → About › Honors
+ *   resources  → About › Documents
+ */
+export interface PlainPageContent {
+  /** Project ids shown first, in this order. The Projects island's other entries follow. */
+  leadProjects: string[]
+  /** Write-ups that appear ONLY on the plain page — no island in the 3D world shows them. */
+  extraProjects: Project[]
+  /** One-line notice shown when the 3D scene couldn't start and sent the visitor here. */
+  fallbackNotice: string
+}
+
 export interface SiteContent {
   /** Your name / site title. */
   name: string
-  /** Short tagline shown under your name (Classic view + loading). */
+  /** Full name, used in page titles, link previews and the plain page. */
+  fullName: string
+  /** The deployed site's public URL, with a trailing slash. */
+  siteUrl: string
+  /** Page titles, descriptions and link-preview tags. */
+  meta: SiteMeta
+  /** Short tagline shown under your name on the plain page. */
   tagline: string
+  /** One plain sentence under your name on the loading screen and the plain page. */
+  oneLiner: string
+  /** Email / GitHub / LinkedIn — the Contact island and the plain page both read these. */
+  contact: Contact
   /** Resume location: a full URL, or a file dropped into /public (e.g. resume.pdf). */
   resumeUrl: string
   /** The floating islands that make up the world. Edit this to change the site. */
   islands: Island[]
+  /** The plain page's own settings + plain-page-only write-ups. */
+  plainPage: PlainPageContent
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  👇  EDIT EVERYTHING BELOW THIS LINE  👇
 // ─────────────────────────────────────────────────────────────────────────────
+const SITE_URL = 'https://notjustjosh.github.io/Personal-Website/'
+
+// Declared up here so the Contact island below and the plain page share them.
+const CONTACT: Contact = {
+  email: 'yuen.jo@northeastern.edu',
+  github: 'https://github.com/NotJustJosh',
+  linkedin: 'https://www.linkedin.com/in/josh-yuen-a30a79322/',
+}
+
 export const content: SiteContent = {
   name: 'Josh Yuen',
+  fullName: 'Joshua Yuen',
+  siteUrl: SITE_URL,
+
+  meta: {
+    ogImage: `${SITE_URL}og-preview.png`,
+    home: {
+      title: 'Joshua Yuen | Electrical Engineering & Physics',
+      description:
+        'Northeastern EE & physics student. Wearable IMU input device for CAD, MEMS characterization with a Michelson interferometer, underwater ROV electronics.',
+      ogTitle: 'Joshua Yuen | Engineering Portfolio',
+      ogDescription: 'Wearable CAD input device, MEMS interferometry, ROV electronics.',
+      url: SITE_URL,
+    },
+    plain: {
+      title: 'Projects | Joshua Yuen',
+      description:
+        'Projects and experience of Joshua Yuen, Northeastern EE & physics student: a wearable IMU input device for CAD, MEMS characterization with a Michelson interferometer, underwater ROV electronics.',
+      ogTitle: 'Joshua Yuen | Projects',
+      ogDescription: 'Wearable CAD input device, MEMS interferometry, ROV electronics. The plain, fast version of the portfolio.',
+      url: `${SITE_URL}projects/`,
+    },
+  },
+
   tagline: 'Electrical Engineering and Physics Student · Aspiring Photonics Systems & Optical Computing Researcher · Interdisciplinary Systems Advocate',
+  oneLiner: 'Electrical engineering and physics student at Northeastern University.',
+  contact: CONTACT,
 
   // Put your resume PDF at /public/resume.pdf, or use a full URL.
   resumeUrl: 'resume.pdf',
@@ -428,12 +594,16 @@ export const content: SiteContent = {
         // ── The intro deck ───────────────────────────────────────────────────
         // Click-through slides instead of a wall of text. Keep each one SHORT.
         // Add `image: 'images/foo.jpg'` to any slide for a picture up top; add
-        // `only: '3d'` to hide a slide from the Classic 2D view.
+        // `only: '3d'` to keep a slide off the plain page.
         slides: [
           {
             hero: true,
+            // The plain page opens with your name + this portrait already.
+            only: '3d',
             title: "Hi, I\'m Josh Yuen",
-            image: 'images/portrait.jpg',
+            // `thumb` is the small copy the plain page's intro shows; the
+            // slide itself uses the full-size `src`.
+            image: { src: 'images/portrait.jpg', thumb: 'images/portrait-thumb.webp', alt: 'Joshua Yuen' },
             subtitle: `Electrical Engineering and Physics Student · 
             Photonic Systems & Optical Computing Researcher · 
             Interdisciplinary Systems Advocate`,
@@ -466,6 +636,8 @@ export const content: SiteContent = {
           },
           {
             title: 'Have a look around',
+            // Talks about the 3D world's menu, so it's left off the plain page.
+            only: '3d',
             // image: 'images/world-overview.jpg',
             body: [
               `Feel free to take a look around my virtual world 
@@ -477,7 +649,7 @@ export const content: SiteContent = {
           {
             title: 'Getting around',
             only: '3d',
-            body: ['You control the little blue capsule.'],
+            body: ['You control the icosahedron.'],
             keys: [
               { keys: ['W', 'A', 'S', 'D'], label: 'Walk (arrow keys work too)' },
               { keys: ['Space'], label: 'Jump' },
@@ -490,7 +662,7 @@ export const content: SiteContent = {
     // ── Showcase platform ────────────────────────────────────────────────────
     // Pure scenery: one big landmass that carries the Projects, Experience and
     // Honors pedestals (`platform: true` → no pedestal, no panel, hidden from
-    // the fast-travel menu and Classic view). The bridges to/from this whole
+    // the fast-travel menu). The bridges to/from this whole
     // area hang off THIS entry, not off the three sections standing on it.
     {
       id: 'showcase',
@@ -524,6 +696,7 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'IMU-Based Hand Gesture Interface for 3D Design and Modeling',
+            model: 'models/gloves.glb',
             short: 'IMU Hand Gesture Interface for CAD',
             date: 'August 2025 - Present',
             description:
@@ -541,18 +714,38 @@ export const content: SiteContent = {
             //   { src: 'images/glove-imu.jpg', caption: '9-axis IMU on the index finger' },
             // ],
             images: [
-              { src: 'images/gloves.png',
+              { src: 'images/gloves.webp', alt: '',
                 caption: '9-axis IMUs integrated with winter gloves' },
-              { src: 'images/gloves-two.png',
+              { src: 'images/gloves-two.webp', alt: '',
                 caption: 'Data output test--UDP connection and wireless data transfer'},
             ],
             links: [
               //{ label: 'Live', url: 'https://example.com' },
               //{ label: 'Code', url: 'https://github.com/yourname/project-one' },
             ],
+
+            // ── Plain-page write-up (projects/#gloves) ──
+            id: 'gloves',
+            summary: 'A wearable, mouseless interface for CAD tools. IMUs in the glove fingertips, with I2C multiplexers.',
+            problem: '',
+            hardPart: '',
+            scope: 'I designed the system, selected the IMUs and multiplexers, soldered the components, and wrote and debugged the software.',
+            decisions: [
+              { question: 'Why an I2C multiplexer instead of address-select pins or separate buses?', answer: '' },
+              { question: 'What does the finger wiring do to bus capacitance and rise time, and how were the pull-ups sized?', answer: '' },
+              { question: 'Why I2C rather than SPI?', answer: '' },
+              { question: 'What per-finger update rate does the system reach through the mux?', answer: '' },
+              { question: "What's the end-to-end latency from finger motion to a CAD action, and how was it measured?", answer: '' },
+              { question: 'How is gyro drift handled?', answer: '' },
+              { question: 'What fails first mechanically, and where?', answer: '' },
+            ],
+            results: '',
+            rev2: '',
           },
           {
             name: 'Deployable Solar Array for Small Satellites',
+            model: 'models/cubesat.glb',
+            id: 'solar-array',
             short: 'Satellite Solar Array',
             date: 'September 2025 - May 2026',
             description:
@@ -565,6 +758,8 @@ export const content: SiteContent = {
           },
           {
             name: 'License Plate OCR Model',
+            model: 'models/licenseplate.glb',
+            id: 'ocr',
             date: 'May 2026 - June 2026',
             description:
               'License plate imaging pipeline for fog occlusions and low visibility settings using grayscaling, gaussian filtering, and unsharp masking',
@@ -575,6 +770,8 @@ export const content: SiteContent = {
           },
           {
             name: 'Terasic Spider Robot: Embedded Systems',
+            model: 'models/spider.glb',
+            id: 'spider-robot',
             short: 'Spider Robot',
             date: 'May 2026 - June 2026',
             description:
@@ -585,7 +782,7 @@ export const content: SiteContent = {
             // video: { src: 'videos/spider-robot.mp4',
             //          caption: 'Gait test — servo PWM driven from the DE10-Nano' },
             images: [
-              { src: 'images/spider-robot.png',
+              { src: 'images/spider-robot.webp', alt: '',
                 caption: 'Spider Robot' },
             ],
             links: [
@@ -594,17 +791,21 @@ export const content: SiteContent = {
           },
           {
             name: 'Automation of Dechlorination Tools for Aqua Pennsylvania',
+            model: 'models/aqua.glb',
+            id: 'aqua',
             short: 'Dechlorination Automation Tool',
             date: 'August 2024 - May 2025',
             description: ' Led development of automation solutions to improve water treatment efficiency that applied engineering principles to real-world challenges in partnership with Aqua Pennsylvania, a utility company; Co-created and taught an accredited class that developed and implemented real-world projects.',
             tags: ['Sensing Array'],
             images: [
-              { src: 'images/aqua-project.png',
+              { src: 'images/aqua-project.webp', alt: '',
                 caption: 'Leadership team at the job site with Aqua Representative' },
             ],
           },
           {
             name: 'Publication: Hide and Seek: A Multimodal Approach to Human Detection',
+            model: 'models/Spy-vs-AI-spy.glb',
+            id: 'hide-and-seek',
             short: 'Human Detection through Facial Recognition Software',
             date: 'July 2024',
             description: `Investigated the results of integrating IR sensing, motion profiling, and mmWave sensing into an open source 
@@ -612,7 +813,7 @@ export const content: SiteContent = {
             Implemented a machine learning model to interpret results.  Published in the 39th Volume of the Journal of the Pennsylvania Governor\’s School for the Sciences.`,
             tags: ['Facial Recognition', 'Machine Learning/Artificial Intelligence', 'Sensing Array'],
             images: [
-              { src: 'images/hide-and-seek-paper.png',
+              { src: 'images/hide-and-seek-paper.png', alt: '',
                 caption: 'Hide and Seek: A Multimodal Approach to Human Detection',
                 href: 'hide-and-seek-paper.pdf' },
             ],
@@ -641,19 +842,26 @@ export const content: SiteContent = {
         projects: [
           {
             name: 'Research Assistant: Microscale Acoustic and Photonic Systems Laboratory, Northeastern University',
+            model: 'models/MAPS.glb',
+            // Dim the triangle so the laser symbol raised on it reads.
+            modelBackingGlow: 0.4,
+            id: 'maps-lab',
             short: 'MAPS Lab',
             date: 'Sep 2025 \– Present',
-            description: `- Developing shot-noise limited Michelson Interferometer to allow for better 
+            description: `- Developing single-shot Michelson Interferometer to allow for better 
             characterization of microelectromechanical systems (MEMS). \n - Designed & assembled 
-            high-magnification optical system to assist in the characterization of MEMS devices in a cryogenic vacuum probe station 
+            $6,000 high-magnification optical system to assist in the characterization of MEMS devices in a cryogenic vacuum probe station 
             \n - Updated and redesigned MATLAB program which calculates displacement of MEMS devices in a Michelson Interferometer under the quadrature condition 
-            using the signal-to-noise ratio calculated using experimental parameters from a spectrum analyzer, photodetector, and an oscilloscope.`,
+            using the signal-to-noise ratio calculated using experimental parameters from a spectrum analyzer, photodetector, and an oscilloscope.
+            \n - Learning Ansys Lumerical Software to assist in work simulating MEMS`,
             tags: [],
             images: [
               { src: 'images/maps.png',
                 caption: 'Logo for the Microscale Acoustic and Photonic Systems Laboratory' },
               { src: 'images/MAPS-team.jpg',
               caption: 'The MAPS Team'},
+              { src: 'images/maps-microscope.png', alt: '',
+                caption: 'MAPS microscope' },
             ],
             links: [
               { label: 'MAPS Website', url: 'https://sites.google.com/view/mapslab' },
@@ -661,13 +869,19 @@ export const content: SiteContent = {
           },
           {
             name: 'Hourly Course Assistant (HCA): EECE2160 Embedded Design: Enabling Robotics, Northeastern University',
+            model: 'models/spider.glb',
+            id: 'ta-eece2160',
             short: 'Embedded Design Course Assistant',
             date: 'Sep 2026 - Present',
-            description: `- Working as a paid assistant (10 hrs/wk) for the electrical engineering fundamental
+            description: `- Working as a paid assistant (15 hrs/wk) for the electrical engineering fundamental
             introducing students to embedded design, field-programmable gate arrays, and other related skills 
-            \n - Primarily assisted students by giving feedback and checking work during their 
+            \n - Primarily assist students by giving feedback and checking work during their 
             allotted lab times and open lab hours, 
-            hosted additional online office hours for homework help, and graded homeworks and exams`,
+            hosted additional office hours for homework help, and graded homeworks and exams
+            \n - Sharpening communication skills and independence via office hours with no professor present; develop
+            relevent framework for effective communication and explanations to facilitate learning.`,
+            // Plain page only — the line under the title.
+            summary: 'Teaching assistant for EECE 2160 at Northeastern: FPGA/digital logic labs with Quartus and the DE1-SoC board.',
             images: [
               { src: 'images/NEUCOE-logo.png',
                 caption: 'Northeastern College of Engineering Logo' },
@@ -676,6 +890,8 @@ export const content: SiteContent = {
           },
           {
             name: 'Electrical Team Deputy, Solar Array Project Electrical Lead: NEU Satellite Labs',
+            model: 'models/cubesat.glb',
+            id: 'nsl',
             short: 'NEU Satellite Labs',
             date: 'Sep 2025 - May 2026',
             description: `- As Overal EE Deputy: Worked as second-in-command under NEU Satellite Labs Electrical Team Lead to: 
@@ -705,9 +921,10 @@ export const content: SiteContent = {
         title: 'Contact',
         body: ['Want to get in touch? Pick whichever works for you.'],
         links: [
-          { label: 'Email (click to copy)', url: 'yuen.jo@northeastern.edu', copy: true },
-          { label: 'GitHub', url: 'https://github.com/NotJustJosh' },
-          { label: 'LinkedIn', url: 'https://www.linkedin.com/in/josh-yuen-a30a79322/' },
+          // Values come from CONTACT at the top of this section.
+          { label: 'Email (click to copy)', url: CONTACT.email, copy: true },
+          { label: 'GitHub', url: CONTACT.github },
+          { label: 'LinkedIn', url: CONTACT.linkedin },
         ],
       },
     },
@@ -775,4 +992,50 @@ export const content: SiteContent = {
       },
     },
   ],
+
+  // ── Plain page (projects/) ───────────────────────────────────────────────
+  // A fast, plain-HTML version of the site, for anyone who wants the project
+  // write-ups without the 3D world. See PlainPageContent above for which
+  // islands it reads. Blank fields stay hidden until you write them.
+  plainPage: {
+    leadProjects: ['gloves', 'lab', 'rov'],
+    fallbackNotice:
+      "The 3D scene couldn't start on this device, so this is the plain version of the portfolio.",
+
+    // These two exist only on the plain page — adding them to an island would
+    // put new orbiting items in the 3D world.
+    extraProjects: [
+      {
+        id: 'lab',
+        name: 'MEMS Characterization with a Michelson Interferometer',
+        date: '',
+        summary:
+          'Microscale Acoustic and Photonic Systems Lab, Northeastern. Characterizing MEMS devices with a Michelson interferometer.',
+        description: '',
+        problem: '',
+        hardPart: '',
+        scope: '',
+        decisions: [],
+        images: [],
+        results: '',
+        rev2: '',
+        links: [{ label: 'MAPS Lab website', url: 'https://sites.google.com/view/mapslab' }],
+      },
+      {
+        id: 'rov',
+        name: 'Underwater ROV Electronics',
+        date: '',
+        summary: 'NU Robotics: circuits for the underwater ROV.',
+        description: '',
+        problem: '',
+        hardPart: '',
+        scope: '',
+        decisions: [],
+        images: [],
+        results: '',
+        rev2: '',
+        links: [],
+      },
+    ],
+  },
 }

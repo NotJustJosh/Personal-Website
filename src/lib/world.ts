@@ -1,8 +1,6 @@
 import { content } from '../content'
 import type { Island, IslandId, PanelContent } from '../content'
 import { ISLAND, ORBIT } from '../config'
-import { coverImage } from './media'
-import type { ResolvedImage } from './media'
 
 // Derived, read-only helpers computed FROM the data in content.ts. Nothing here
 // is island-specific — add islands by editing content.ts only.
@@ -11,7 +9,7 @@ export const ISLANDS = content.islands
 
 /**
  * Islands with their own section/panel — i.e. everything except scenery
- * platforms. This is what the fast-travel menu and Classic view list.
+ * platforms. This is what the fast-travel menu lists.
  */
 export const CONTENT_ISLANDS = ISLANDS.filter((i) => !i.platform)
 
@@ -121,8 +119,10 @@ export interface IslandItem {
   short?: string
   /** Short glyph for the orbiting icon (defaults to the item number). */
   icon: string
-  /** Cover image (the first of a project's `images`), floated as a 3D preview. */
-  image?: ResolvedImage
+  /** A .glb in /public drawn in place of the item's gem (projects' `model`). */
+  model?: string
+  /** Glow of that model's backing piece, as a fraction (projects' `modelBackingGlow`). */
+  modelBackingGlow?: number
 }
 
 /** Normalized list of an island's interactable items. */
@@ -135,7 +135,8 @@ export function islandItems(island: Island): IslandItem[] {
       label: p.name,
       short: p.short,
       icon: p.icon ?? String(i + 1),
-      image: coverImage(p.images) ?? undefined,
+      model: p.model,
+      modelBackingGlow: p.modelBackingGlow,
     }))
   }
   if (c.links?.length) {

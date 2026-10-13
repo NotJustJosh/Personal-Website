@@ -60,8 +60,9 @@ export const VISUALS = {
 
   /** Emissive strengths. These are what actually glow through the bloom pass. */
   EMISSIVE: {
-    /** The spinning cube on each pedestal. */
-    marker: 4.5,
+    /** The spinning cube on each pedestal (and the player's shell, which matches
+     *  it). Low enough that its edges still read through the bloom. */
+    marker: 2.5,
     /** The orbiting project icons: resting, and when you're next to one. */
     itemIdle: 3.0,
     itemSelected: 6.5,
@@ -105,10 +106,9 @@ export const ORBIT = {
   /** How close (horizontal world units) you must be to an icon to select it. */
   REACH: 4,
 
-  /** Max size of the small preview image floating above an item that has one.
-   *  The image is fitted inside this box, so its aspect ratio is preserved. */
-  PREVIEW_WIDTH: 2.6,
-  PREVIEW_HEIGHT: 1.7,
-  /** How far above the icon the preview's bottom edge sits (clears the label). */
-  PREVIEW_BASE_Y: 1.8,
+  /** Max size of an item's 3D model (`model` in content.ts), drawn in place of
+   *  its gem. It's fitted inside this box, keeping its shape, and centred where
+   *  the gem sits — keep the height under ~1.6 so it clears the name above. */
+  MODEL_WIDTH: 1.5,
+  MODEL_HEIGHT: 1.2,
 }

@@ -1,3 +1,5 @@
+import { resolveUrl } from './url'
+
 // Resolve a content URL to something safe to use in an href/src.
 //
 // • External links (https://, http://, //, mailto:, tel:) are returned as-is.
@@ -11,16 +13,5 @@ export function bareValue(url: string): string {
 }
 
 export function asset(url: string): string {
-  url = url.trim() // tolerate stray whitespace in content.ts
-  // Already an absolute URL or a known scheme — leave it alone.
-  if (/^([a-z]+:)?\/\//i.test(url) || /^(mailto:|tel:)/i.test(url)) {
-    return url
-  }
-  // Bare email address → mailto:
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) {
-    return `mailto:${url}`
-  }
-  // Otherwise it's a local file in /public — prefix the base path.
-  const base = import.meta.env.BASE_URL // e.g. "/Personal-Website/" or "/"
-  return base.replace(/\/$/, '') + '/' + url.replace(/^\//, '')
+  return resolveUrl(url, import.meta.env.BASE_URL) // e.g. "/Personal-Website/" or "/"
 }

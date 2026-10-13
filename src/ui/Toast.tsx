@@ -7,7 +7,7 @@ import { create } from 'zustand'
 //  useGame: this never crosses the DOM↔Canvas boundary, it's purely UI.
 //
 //  Call it from anywhere:  useToast.getState().show('Copied!')
-//  <Toast /> is mounted once per view in App.tsx (3D and Classic both).
+//  <Toast /> is mounted once in App.tsx.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const VISIBLE_MS = 2600

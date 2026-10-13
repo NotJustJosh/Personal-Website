@@ -3,8 +3,8 @@ import type { Video } from '../content'
 import { resolveVideo } from '../lib/media'
 
 // A short looping clip under a project card — the video counterpart of Gallery.
-// Rendered by the shared ProjectCard, so a project's clip looks and behaves the
-// same in the 3D panel and the Classic 2D view.
+// Rendered by ProjectCard in the 3D panel. (The plain page renders the same
+// clip itself, with controls and no autoplay.)
 //
 // It autoplays MUTED and loops: browsers refuse to autoplay anything with
 // sound, and a silent few-second loop of hardware moving reads as part of the

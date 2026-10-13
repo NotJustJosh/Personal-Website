@@ -25,6 +25,7 @@ const BASE_PLATE_MODEL = 'models/base_plate_8.glb'
 const PEDESTAL_HEIGHT = 0.5 // small pedestal
 const PLATE_RADIUS = 2.8 // footprint of the marble base plate
 const CUBE_SIZE = 0.4
+const CUBE_OPACITY = 0.8 // a little see-through
 const SPIN_SPEED = 0.7 // radians / second
 const BOB_SPEED = 1.5
 const BOB_AMP = 0.16
@@ -112,6 +113,8 @@ function Centerpiece({ accentColor }: { accentColor: string }) {
             emissiveIntensity={VISUALS.EMISSIVE.marker}
             toneMapped={false}
             roughness={0.3}
+            transparent
+            opacity={CUBE_OPACITY}
           />
         </mesh>
       </group>

@@ -1,12 +1,15 @@
-import { Suspense } from 'react'
+import { Suspense, useRef } from 'react'
 import { Text, Billboard, useGLTF } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import { RigidBody } from '@react-three/rapier'
+import * as THREE from 'three'
 import type { Island as IslandData } from '../content'
 import { islandRadius, islandHasOrbit, groundModelOf } from '../lib/world'
 import { ISLAND } from '../config'
 import { useModel, modelUrl, useBakedGeometry } from '../lib/gltf'
 import { OrbitingItems } from './OrbitingItems'
 import { Waypoint } from './Waypoint'
+import { useGame } from '../store'
 
 // A single floating island, generated from its data entry:
 //   • the user's island.glb as the visual body (auto-scaled to `size`, top at
@@ -39,6 +42,17 @@ function IslandModel({ radius, url, rotateY }: { radius: number; url: string; ro
 export function Island({ island }: { island: IslandData }) {
   const [x, y, z] = island.position
   const radius = islandRadius(island)
+
+  // A pedestal's name only shows while you're at it (the same zone that
+  // offers "Press E"), growing in and out, so the far ones don't clutter the
+  // view. A platform's district sign stays up: it has no pedestal to walk to.
+  const label = useRef<THREE.Group>(null)
+  useFrame(() => {
+    const l = label.current
+    if (!l || island.platform) return
+    const here = useGame.getState().nearbyIsland === island.id
+    l.scale.setScalar(THREE.MathUtils.lerp(l.scale.x, here ? 1 : 0, 0.15))
+  })
 
   return (
     <group position={[x, y, z]}>
@@ -84,7 +98,7 @@ export function Island({ island }: { island: IslandData }) {
 
       {/* Floating label, always facing the camera. A platform's name sits higher
           and larger, so it reads as a district sign above the pedestal labels. */}
-      <Billboard position={[0, island.platform ? 9.5 : 3.8, 0]}>
+      <Billboard ref={label} position={[0, island.platform ? 9.5 : 3.8, 0]} scale={island.platform ? 1 : 0}>
         <Text
           fontSize={island.platform ? 1.2 : 0.9}
           color="#eef2ff"

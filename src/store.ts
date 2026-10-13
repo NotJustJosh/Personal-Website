@@ -58,6 +58,9 @@ interface GameState {
   /** Screen fade for respawn / teleport polish. */
   fading: boolean
 
+  /** True while the browser has taken the WebGL context away (the scene is frozen). */
+  contextLost: boolean
+
   /** Rendering quality, persisted across visits. */
   quality: Quality
   toggleQuality: () => void
@@ -71,6 +74,7 @@ interface GameState {
   /** Request a fast-travel jump to an island (also closes any open panel + fades). */
   requestTeleport: (id: IslandId) => void
   setFading: (fading: boolean) => void
+  setContextLost: (lost: boolean) => void
 }
 
 export const useGame = create<GameState>((set) => ({
@@ -83,6 +87,7 @@ export const useGame = create<GameState>((set) => ({
   teleportTarget: null,
   teleportNonce: 0,
   fading: false,
+  contextLost: false,
   quality: initialQuality(),
 
   toggleQuality: () =>
@@ -114,4 +119,5 @@ export const useGame = create<GameState>((set) => ({
       fading: true,
     })),
   setFading: (fading) => set({ fading }),
+  setContextLost: (contextLost) => set({ contextLost }),
 }))

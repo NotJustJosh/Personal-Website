@@ -1,35 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useProgress } from '@react-three/drei'
 import { useGame } from '../store'
+import { finishBoot, setBootProgress } from '../lib/boot'
 
-// DOM loading overlay. Shows asset progress while the scene loads, then fades
-// out once the world is ready. `useProgress` reads three's loading manager, so
-// it works here outside the <Canvas>.
+// Drives the loading screen. Its markup is static HTML in index.html (#boot —
+// name, links, "Skip to projects", progress bar), so it's readable before any
+// JavaScript runs; this fills the bar with asset progress, then fades it out
+// once the world is ready. `useProgress` reads three's loading manager, so it
+// works here outside the <Canvas>.
 export function LoadingScreen() {
   const ready = useGame((s) => s.ready)
   const { progress } = useProgress()
-  const [hidden, setHidden] = useState(false)
+
+  useEffect(() => {
+    setBootProgress(ready ? 100 : Math.max(Math.round(progress), 6))
+  }, [ready, progress])
 
   useEffect(() => {
     if (!ready) return
-    const t = setTimeout(() => setHidden(true), 700) // allow the fade-out to play
-    return () => clearTimeout(t)
+    return finishBoot() // fade out, then hide
   }, [ready])
 
-  if (hidden) return null
-
-  const pct = Math.round(progress)
-  return (
-    <div className={`loader${ready ? ' loader--done' : ''}`} aria-hidden={ready}>
-      <div className="loader__inner">
-        <h1 className="loader__title">Loading…</h1>
-        <div className="loader__track">
-          <div
-            className="loader__fill"
-            style={{ width: `${ready ? 100 : Math.max(pct, 6)}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )
+  return null
 }

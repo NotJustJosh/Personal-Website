@@ -9,7 +9,8 @@ import { VISUALS } from '../config'
 //  A few big additive planes, each running layered value noise scrolled upward
 //  so it reads as wispy vertical streaks rather than a flat gradient band. They
 //  fade to nothing at top and bottom, sit at different depths/speeds for
-//  parallax, and are bright enough that the bloom pass picks them up.
+//  parallax, and are bright enough that the bloom pass picks them up. Every
+//  edge fades out, the bottom over a long way, so no curtain ends in a line.
 //
 //  Knobs live in VISUALS.AURORA (src/config.ts).
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,8 +72,12 @@ const FRAG = /* glsl */ `
     float ribbons = fbm(vec2(uv.x * 4.0 + uSeed, uTime * uSpeed * 0.35));
     n *= smoothstep(0.18, 0.72, ribbons);
 
-    // Fade out at the top and bottom edges so the plane never shows itself.
-    float mask = smoothstep(0.0, 0.38, uv.y) * (1.0 - smoothstep(0.55, 1.0, uv.y));
+    // Fade out at every edge so the plane never shows itself: a long fade at
+    // the bottom (it hangs down toward the cloud sea), softer at the top, and
+    // a wide one at each end so the curtain thins away instead of stopping.
+    float mask = smoothstep(0.0, 0.5, uv.y) * (1.0 - smoothstep(0.55, 1.0, uv.y));
+    float ends = smoothstep(0.0, 0.3, uv.x) * (1.0 - smoothstep(0.7, 1.0, uv.x));
+    mask *= ends * ends; // squared: eases in from nothing, no visible start
 
     vec3 col = mix(uLow, uMid, smoothstep(0.0, 0.55, uv.y));
     col = mix(col, uHigh, smoothstep(0.45, 1.0, uv.y));

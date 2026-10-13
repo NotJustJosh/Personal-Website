@@ -7,19 +7,21 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 //  GLTF + Draco loader, ready for you to drop in .glb models.
 // ─────────────────────────────────────────────────────────────────────────────
 //  drei's useGLTF wires up three's GLTFLoader. Passing a decoder path as the 2nd
-//  argument enables Draco-compressed meshes (smaller files). The default path
-//  below pulls the WASM decoder from Google's CDN — works out of the box online.
+//  argument enables Draco-compressed meshes (smaller files). The decoder is
+//  SELF-HOSTED in public/draco/ (copied from node_modules/three/examples/jsm/
+//  libs/draco/gltf/), so it works offline; it's only fetched if a model is
+//  actually Draco-compressed. src/lib/selfHosted.ts points drei's own default
+//  (used by plain useGLTF calls) at the same copy.
 //
-//  To SELF-HOST the decoder (full offline support / no CDN dependency):
-//    1. Copy node_modules/three/examples/jsm/libs/draco/ → public/draco/
-//    2. Change DRACO_DECODER_PATH to `${import.meta.env.BASE_URL}draco/`
+//  Meshopt-compressed models need nothing extra: drei's useGLTF enables three's
+//  MeshoptDecoder by default, and it's bundled into the JS.
 //
 //  Usage in a component:
 //    const { scene } = useModel(modelUrl('models/avatar.glb'))
 //    return <primitive object={scene} />
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/'
+const DRACO_DECODER_PATH = `${import.meta.env.BASE_URL}draco/`
 
 /** Build a base-path-aware URL for a model stored in /public. */
 export function modelUrl(path: string): string {
@@ -116,4 +118,34 @@ export function topFaceReach(
     best = Math.max(best, pos.getX(i) * dirX + pos.getZ(i) * dirZ)
   }
   return best
+}
+
+/**
+ * Whether the mesh's TOP face covers the point (x, z), in the geometry's own
+ * units. Expects the non-indexed geometry useBakedGeometry returns.
+ *
+ * Used to keep bridge pillars standing on an island rather than past its rim:
+ * a radius alone can't say where an irregular, stretched outline ends.
+ */
+export function topFaceContains(geometry: THREE.BufferGeometry, x: number, z: number): boolean {
+  const pos = geometry.attributes.position as THREE.BufferAttribute
+  if (!pos) return false
+
+  let topY = -Infinity
+  for (let i = 0; i < pos.count; i++) topY = Math.max(topY, pos.getY(i))
+
+  const EPS = 1e-3
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    if (pos.getY(i) < topY - EPS || pos.getY(i + 1) < topY - EPS || pos.getY(i + 2) < topY - EPS) continue
+    // Barycentric test in the X/Z plane.
+    const x1 = pos.getX(i), z1 = pos.getZ(i)
+    const x2 = pos.getX(i + 1), z2 = pos.getZ(i + 1)
+    const x3 = pos.getX(i + 2), z3 = pos.getZ(i + 2)
+    const d = (z2 - z3) * (x1 - x3) + (x3 - x2) * (z1 - z3)
+    if (Math.abs(d) < 1e-12) continue
+    const l1 = ((z2 - z3) * (x - x3) + (x3 - x2) * (z - z3)) / d
+    const l2 = ((z3 - z1) * (x - x3) + (x1 - x3) * (z - z3)) / d
+    if (l1 >= 0 && l2 >= 0 && l1 + l2 <= 1) return true
+  }
+  return false
 }

@@ -8,7 +8,7 @@ import { useToast } from './Toast'
 // toast — used for the email address, so visitors get the text instead of
 // having a mail client thrown at them.
 //
-// Shared by Panel, ClassicView, ContentGroups and ProjectCard so every link in
+// Shared by Panel, ContentGroups and ProjectCard so every link in
 // the site behaves the same way.
 export function ContentLink({
   link,
