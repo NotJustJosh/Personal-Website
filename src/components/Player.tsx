@@ -4,6 +4,7 @@ import { RigidBody, CapsuleCollider, useRapier } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import { useMovementKeys } from '../hooks/useMovementKeys'
+import { touchInput } from '../lib/touch'
 import { PlayerAvatar } from './PlayerAvatar'
 import { useGame } from '../store'
 import type { ItemRef } from '../store'
@@ -25,7 +26,8 @@ import { WORLD, ORBIT } from '../config'
 //  Third-person physics character controller (floating-islands edition).
 //
 //  • Dynamic Rapier capsule, rotations locked so it stays upright.
-//  • WASD/arrows move RELATIVE to the camera; Space jumps.
+//  • WASD/arrows (or the touch joystick) move RELATIVE to the camera; Space
+//    (or the touch Jump button) jumps.
 //  • ONE jump, from the ground only — no double jump, sprint, or wall climbing.
 //  • Weighty arc: stronger gravity + FALL_MULTIPLIER so it's not floaty.
 //  • Falls into the void below RESPAWN_Y → gently respawns on the NEAREST island.
@@ -159,14 +161,17 @@ export function Player({ targetRef }: PlayerProps) {
       forward.current.normalize()
       right.current.crossVectors(forward.current, up.current).normalize()
 
-      const f = (keys.current.forward ? 1 : 0) - (keys.current.backward ? 1 : 0)
-      const r = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0)
-      const speed = WALK_SPEED
+      // Keys and the touch joystick add together. Keys are all-or-nothing; the
+      // joystick is analog, so a light push walks slowly. Capped at full speed.
+      const f = (keys.current.forward ? 1 : 0) - (keys.current.backward ? 1 : 0) + touchInput.moveY
+      const r = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0) + touchInput.moveX
+      const push = Math.min(1, Math.hypot(f, r))
+      const speed = WALK_SPEED * push
 
       move.current.set(0, 0, 0)
       move.current.addScaledVector(forward.current, f)
       move.current.addScaledVector(right.current, r)
-      const moving = move.current.lengthSq() > 0
+      const moving = move.current.lengthSq() > 1e-6
       if (moving) move.current.normalize().multiplyScalar(speed)
 
       const ground = groundInfo(rb)
@@ -196,7 +201,7 @@ export function Player({ targetRef }: PlayerProps) {
 
       // Jump: a single jump, and only from the ground. `airborneByJump` stays set
       // until we've actually landed, so holding/retapping Space mid-air does nothing.
-      const jumpHeld = keys.current.jump
+      const jumpHeld = keys.current.jump || touchInput.jump
       if (jumpHeld && !prevJump.current && grounded && !airborneByJump.current) {
         const cur = rb.linvel()
         rb.setLinvel({ x: cur.x, y: JUMP_SPEED, z: cur.z }, true)

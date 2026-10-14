@@ -340,6 +340,8 @@ export interface Slide {
   hero?: boolean
   /** Key-cap rows — use these for the movement/controls tutorial slides. */
   keys?: KeyHint[]
+  /** Shown instead of `keys` on touch screens (phones, tablets). */
+  touchKeys?: KeyHint[]
   /** Buttons at the bottom of the slide. */
   links?: LinkItem[]
   /**
@@ -653,6 +655,13 @@ export const content: SiteContent = {
             keys: [
               { keys: ['W', 'A', 'S', 'D'], label: 'Walk (arrow keys work too)' },
               { keys: ['Space'], label: 'Jump' },
+            ],
+            // What a phone shows instead (the on-screen controls).
+            touchKeys: [
+              { keys: ['Joystick'], label: 'Walk (bottom right)' },
+              { keys: ['Jump'], label: 'Jump (bottom left)' },
+              { keys: ['Select'], label: 'Open what you’re standing at' },
+              { keys: ['Drag'], label: 'Look around' },
             ],
           },
         ],

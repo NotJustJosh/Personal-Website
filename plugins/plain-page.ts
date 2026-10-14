@@ -284,8 +284,7 @@ export function renderPlainBody(content: SiteContent, o: PlainPageOptions): stri
   const url = (u: string) => esc(resolveUrl(u, o.base))
   const projects = plainProjects(content)
   const roles = island(content, 'experience')?.content.projects ?? []
-  // ?view=3d: phones are otherwise sent straight back here (see src/main.tsx).
-  const home = esc(`${o.base}?view=3d`)
+  const home = esc(o.base)
 
   return `
 <header class="intro">

@@ -4,9 +4,10 @@ This is my attempt at creating an interesting and interactive portfolio to showc
 the work I've done over the past few years. Walk around, take a look at projects, and explore!
 If all of this isn't for you, open up the plaintext view and get the important info fast.
 
-The entire world is **data-driven from one file** (`src/content.ts`). Phones,
-and browsers that can't run the 3D scene, get a fast **plain page** (`projects/`) built
-from the same file. It builds to static files and deploys to **GitHub Pages**.
+The entire world is **data-driven from one file** (`src/content.ts`). Phones play it
+with on-screen controls; browsers that can't run the 3D scene get a fast **plain page**
+(`projects/`) built from the same file. It builds to static files and deploys to
+**GitHub Pages**.
 
 > No backend, no multiplayer, no networking — it all builds to static files.
 
@@ -30,6 +31,45 @@ from the same file. It builds to static files and deploys to **GitHub Pages**.
 | Close a panel | `Esc` or the × button |
 | Browse a project's images | click any thumbnail; then `←` / `→`, `Esc` to close |
 | Fast-travel | the **Fast travel** menu (top-right) |
+
+### On a phone
+
+Phones (any touch screen, really) get on-screen controls
+([`src/ui/TouchControls.tsx`](src/ui/TouchControls.tsx)), and in portrait a card asking
+you to turn the phone sideways (with a link to the plain page instead).
+
+| Action | Touch |
+| --- | --- |
+| Move | the see-through **joystick**, bottom-right (push further to go faster) |
+| Jump | **Jump**, bottom-left |
+| Interact | **Select**, bottom-left (dimmed when there's nothing in reach) |
+| Look around | drag anywhere else on the world |
+
+The controls tutorial slide shows these instead of WASD on a phone (`touchKeys` on the
+slide in `content.ts`).
+
+### Testing the phone version on a laptop
+
+**In Chrome, no phone needed.** Run `npm run dev`, open the page, press **F12**, then
+**Ctrl+Shift+M** (the "Toggle device toolbar" icon). Pick a phone (e.g. *Pixel 7* or
+*iPhone 14 Pro Max*) from the device list at the top and **reload** — the controls
+appear, because the emulated phone reports a touch screen. The rotate icon next to the
+size switches portrait/landscape. Your mouse acts as one finger: drag the joystick,
+click Jump/Select, drag the world to look. (One finger at a time, so you can't walk and
+look at once there.)
+
+**On your real phone, over Wi-Fi.** With the laptop and phone on the same network:
+
+```bash
+npm run dev:phone     # dev server, reachable from other devices on your network
+npm run serve:phone   # or: the production build, the same way
+```
+
+Vite prints a **Network** address, e.g. `http://10.0.0.146:5173/Personal-Website/` —
+open that on the phone. The first time, Windows may ask whether Node.js can use the
+network: allow it on **private** networks. These commands share the site with your local
+network only while they run; the plain `npm run dev` / `npm run serve` stay
+laptop-only.
 
 Fall off the world? You're gently respawned on the nearest island — no penalty.
 
@@ -80,7 +120,9 @@ It checks the built HTML (titles, link-preview tags, the static intro), the plai
 (no JS / models / textures, blank fields hidden, images sized), the skip links and
 keyboard focus, `?nowebgl=1` and a failing renderer, print styles (and writes
 `smoke-output/projects-print.pdf`), and phone emulation (pinch-zoom on the plain page;
-touches on the 3D canvas reach the scene instead of zooming). Screenshots go to
+the rotate card in portrait; in landscape the joystick, Jump and Select show, Select
+opens a panel, the joystick walks you off the island, and touches on the 3D canvas reach
+the scene instead of zooming). Screenshots go to
 `smoke-output/`.
 
 ---
@@ -331,8 +373,6 @@ It shows Projects, Experience and About:
   the Resources island's download links. The intro shows the hero slide's portrait (its
   small `thumb`) and the site `tagline`; projects show their tags as a line of text.
 
-Phones are sent here automatically, before the 3D bundle downloads. The page's
-"3D world" links add `?view=3d`, which lets a phone into the 3D world anyway.
 
 Every project has an `id`, which is its anchor — link straight to one with
 `projects/#gloves`.
@@ -446,7 +486,7 @@ src/
   content.ts            ← EDIT THIS: the islands array = the whole world
   config.ts             ← world border, respawn Y, gravity, island dimensions
   store.ts              ← shared UI/teleport/fade state (zustand)
-  main.tsx              ← entry: WebGL 2 + phone checks, then loads start.tsx (the app)
+  main.tsx              ← entry: WebGL 2 check, then loads start.tsx (the app)
   App.tsx               ← the 3D world + its DOM UI layout
   scene/
     World.tsx           ← the <Canvas> + pale-void background/fog
@@ -461,7 +501,7 @@ src/
     CameraRig.tsx       ← orbit camera w/ pitch clamp + raycast anti-clip
     Avatar.tsx          ← example .glb avatar (not used by default)
   ui/                   ← plain HTML/DOM over the canvas
-    LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI, SkipLink,
+    LoadingScreen, Hud, Panel, PanelOverlay, PersistentUI, SkipLink, TouchControls,
     FastTravelMenu, FadeOverlay, InputManager
     ProjectCard.tsx     ← one project card in a Panel
     Gallery.tsx         ← image thumbnails + the full-size lightbox
@@ -476,7 +516,7 @@ src/
     prose.ts            ← "- " bullets / paragraphs rules (shared with the plain page)
     clipboard.ts        ← clipboard copy with a legacy fallback
     media.ts            ← normalizes content.ts `images` entries into real URLs
-    device.ts           ← phone detection (phones get the plain page)
+    touch.ts            ← touch-screen detection + the joystick/jump state
     fallback.ts         ← the way out to the plain page (+ ?nowebgl=1)
     boot.ts             ← drives the static loading screen in index.html
     gltf.ts             ← GLTF loader with Draco support
@@ -525,9 +565,8 @@ workflow's `deploy` job and under Settings → Pages.
 
 ## Notes
 
-- **Mobile:** phones get the plain page automatically
-  ([`lib/device.ts`](src/lib/device.ts)); the 3D world is built for keyboard + mouse.
-  Slower desktops can use **Reduce graphics** (top-right).
+- **Mobile:** phones play the 3D world with on-screen controls (see *On a phone*).
+  Slower phones and desktops can use **Reduce graphics** (top-right).
 - The build prints a chunk-size warning — that's Three.js + Rapier's WASM (~1.2 MB
   gzipped), normal for a 3D app, not an error.
 - This is an MVP foundation. Obvious next steps: a real `.glb` avatar with walk

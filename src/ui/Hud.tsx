@@ -1,5 +1,6 @@
 import { useGame } from '../store'
 import { getIsland, islandItems } from '../lib/world'
+import { useTouchScreen } from '../lib/touch'
 
 function truncate(s: string, max = 48): string {
   return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s
@@ -7,7 +8,10 @@ function truncate(s: string, max = 48): string {
 
 // Heads-up display: a persistent controls legend plus the "Press E" prompt that
 // appears when the player is on an island (or next to one of its orbiting items).
+// On a touch screen the on-screen controls explain themselves, so the keyboard
+// legend is dropped and the prompt names the Select button instead.
 export function Hud() {
+  const touch = useTouchScreen()
   const nearbyIsland = useGame((s) => s.nearbyIsland)
   const nearbyItem = useGame((s) => s.nearbyItem)
   const openPanel = useGame((s) => s.openPanel)
@@ -24,28 +28,31 @@ export function Hud() {
 
   return (
     <>
-      <div className="controls">
-        <span>
-          <kbd>W</kbd>
-          <kbd>A</kbd>
-          <kbd>S</kbd>
-          <kbd>D</kbd> move
-        </span>
-        <span>
-          <kbd>Space</kbd> jump
-        </span>
-        <span>click to look · scroll to zoom</span>
-        <span>
-          <kbd>E</kbd> interact
-        </span>
-        <span>
-          <kbd>Esc</kbd> free cursor
-        </span>
-      </div>
+      {!touch && (
+        <div className="controls">
+          <span>
+            <kbd>W</kbd>
+            <kbd>A</kbd>
+            <kbd>S</kbd>
+            <kbd>D</kbd> move
+          </span>
+          <span>
+            <kbd>Space</kbd> jump
+          </span>
+          <span>click to look · scroll to zoom</span>
+          <span>
+            <kbd>E</kbd> interact
+          </span>
+          <span>
+            <kbd>Esc</kbd> free cursor
+          </span>
+        </div>
+      )}
 
       {promptLabel && !openPanel && (
         <div className="prompt">
-          Press <kbd>E</kbd> to open <strong>{promptLabel}</strong>
+          {touch ? 'Tap ' : 'Press '}
+          <kbd>{touch ? 'Select' : 'E'}</kbd> to open <strong>{promptLabel}</strong>
         </div>
       )}
     </>

@@ -67,6 +67,8 @@ interface GameState {
 
   /** Open an island's panel, optionally focused on one of its items. */
   openSection: (id: IslandId, focusIndex?: number) => void
+  /** The interact key (E) / the touch Select button: open whatever you're at. */
+  interact: () => void
   closePanel: () => void
   setNearbyIsland: (id: IslandId | null) => void
   setNearbyItem: (item: ItemRef | null) => void
@@ -77,7 +79,7 @@ interface GameState {
   setContextLost: (lost: boolean) => void
 }
 
-export const useGame = create<GameState>((set) => ({
+export const useGame = create<GameState>((set, get) => ({
   // Open the hub (About) panel by default on load.
   openPanel: spawnIsland().id,
   nearbyIsland: null,
@@ -106,6 +108,13 @@ export const useGame = create<GameState>((set) => ({
       openPanel: id,
       focusItem: focusIndex != null ? { islandId: id, index: focusIndex } : null,
     }),
+  // Prefer the orbiting item you're standing next to; else the whole island.
+  interact: () => {
+    const { openPanel, nearbyIsland, nearbyItem, openSection } = get()
+    if (openPanel) return
+    if (nearbyItem) openSection(nearbyItem.islandId, nearbyItem.index)
+    else if (nearbyIsland) openSection(nearbyIsland)
+  },
   closePanel: () => set({ openPanel: null, focusItem: null }),
   setNearbyIsland: (id) => set((s) => (s.nearbyIsland === id ? s : { nearbyIsland: id })),
   setNearbyItem: (item) => set((s) => (sameItem(s.nearbyItem, item) ? s : { nearbyItem: item })),

@@ -3,6 +3,7 @@ import type { Slide } from '../content'
 import { resolveImages } from '../lib/media'
 import { RichText } from './RichText'
 import { ContentLink } from './ContentLink'
+import { useTouchScreen } from '../lib/touch'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  A click-through slide deck for an island (see `slides` in content.ts).
@@ -28,6 +29,7 @@ export function Slides({
   onIndexChange?: (index: number) => void
 }) {
   const [index, setIndex] = useState(0)
+  const touch = useTouchScreen()
 
   // Drop slides meant only for the plain page (projects/).
   const slides = useMemo(() => all.filter((s) => s.only !== 'plain'), [all])
@@ -40,6 +42,9 @@ export function Slides({
   const count = slides.length
   const safeIndex = Math.min(index, Math.max(count - 1, 0))
   const slide = slides[safeIndex]
+
+  // Key caps for this screen: the touch version on phones, when there is one.
+  const keyRows = (touch && slide?.touchKeys) || slide?.keys
 
   const image = useMemo(
     () => (slide?.image ? resolveImages([slide.image])[0] : null),
@@ -94,9 +99,9 @@ export function Slides({
           <RichText key={i} text={paragraph} className="slide__body" />
         ))}
 
-        {slide.keys && slide.keys.length > 0 && (
+        {keyRows && keyRows.length > 0 && (
           <dl className="slide__keys">
-            {slide.keys.map((hint, i) => (
+            {keyRows.map((hint, i) => (
               <div key={i} className="slide__keyrow">
                 <dt className="slide__keycaps">
                   {hint.keys.map((cap, k) => (

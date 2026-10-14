@@ -9,12 +9,7 @@ export function InputManager() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'KeyE') {
-        const { openPanel, nearbyIsland, nearbyItem, openSection } = useGame.getState()
-        if (!openPanel) {
-          // Prefer the orbiting item you're standing next to; else the whole island.
-          if (nearbyItem) openSection(nearbyItem.islandId, nearbyItem.index)
-          else if (nearbyIsland) openSection(nearbyIsland)
-        }
+        useGame.getState().interact()
       } else if (e.code === 'Escape') {
         // Free the cursor (browsers also do this natively on physical Esc) and
         // close any open panel.

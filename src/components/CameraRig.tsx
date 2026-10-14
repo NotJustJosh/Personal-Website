@@ -11,6 +11,8 @@ import { useGame } from '../store'
 //    no button held. Press Esc to release the cursor (for the menus/panels).
 //  • Scroll to zoom.
 //  • Standard vertical: move the mouse up → look up.
+//  • Touch: drag a finger across the world to look around (the on-screen
+//    joystick and buttons sit on top, so those touches never reach here).
 //  • Pitch is clamped so the camera stays ABOVE the island plane.
 //  • A Rapier raycast pulls the camera in when static geometry would occlude it,
 //    so it never clips through islands/bridges (dynamic bodies are excluded, so
@@ -21,6 +23,7 @@ import { useGame } from '../store'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SENSITIVITY = 0.0022
+const TOUCH_SENSITIVITY = 0.006 // radians per pixel dragged
 const MIN_PITCH = 0.08 // keep the camera at/above the island plane
 const MAX_PITCH = 1.35 // near top-down
 const MIN_DISTANCE = 4
@@ -56,16 +59,42 @@ export function CameraRig({ targetRef }: CameraRigProps) {
   useEffect(() => {
     const el = gl.domElement
 
-    // Click the canvas to capture the pointer (engage mouselook).
+    // Click the canvas to capture the pointer (engage mouselook). Mouse only:
+    // a tap on a touch screen has no cursor to lock.
+    let lastPointer = 'mouse'
     const onClick = () => {
+      if (lastPointer !== 'mouse') return
       if (useGame.getState().openPanel) return // don't grab the cursor over a panel
       if (document.pointerLockElement !== el) {
         try {
-          el.requestPointerLock?.()
+          // Newer browsers return a promise that rejects instead of throwing.
+          void Promise.resolve(el.requestPointerLock?.()).catch(() => {})
         } catch {
           /* browser may reject if called too soon after exit */
         }
       }
+    }
+
+    // Touch look: follow ONE finger that started on the world, so a thumb
+    // resting on the joystick (or a second finger) doesn't fight it.
+    const drag = { id: -1, x: 0, y: 0 }
+    const onPointerDown = (e: PointerEvent) => {
+      lastPointer = e.pointerType
+      if (e.pointerType !== 'touch' || drag.id !== -1) return
+      drag.id = e.pointerId
+      drag.x = e.clientX
+      drag.y = e.clientY
+    }
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerId !== drag.id) return
+      yaw.current -= (e.clientX - drag.x) * TOUCH_SENSITIVITY
+      pitch.current += (e.clientY - drag.y) * TOUCH_SENSITIVITY
+      pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current))
+      drag.x = e.clientX
+      drag.y = e.clientY
+    }
+    const onPointerEnd = (e: PointerEvent) => {
+      if (e.pointerId === drag.id) drag.id = -1
     }
 
     // Only rotate while the pointer is locked to our canvas.
@@ -86,10 +115,18 @@ export function CameraRig({ targetRef }: CameraRigProps) {
 
     el.style.touchAction = 'none'
     el.addEventListener('click', onClick)
+    el.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerEnd)
+    window.addEventListener('pointercancel', onPointerEnd)
     document.addEventListener('mousemove', onMouseMove)
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       el.removeEventListener('click', onClick)
+      el.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerEnd)
+      window.removeEventListener('pointercancel', onPointerEnd)
       document.removeEventListener('mousemove', onMouseMove)
       el.removeEventListener('wheel', onWheel)
     }

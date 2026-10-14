@@ -77,7 +77,7 @@ check('gloves: filled-in scope is rendered', gloves.includes('<h4>My scope</h4>'
 check('gloves: tags shown as a line of text', /<p class="tags">[^<]*Wearable Technology/.test(gloves))
 check('intro has the portrait (small copy, sized, with alt)', /<img class="portrait" src="[^"]*portrait-thumb\.webp" alt="[^"]+" width="\d+" height="\d+"/.test(plain))
 check('intro has the tagline', /<p class="tagline">[^<]+<\/p>/.test(plain))
-check('"3D world" links carry ?view=3d, so phones are not bounced back',/href="[^"]*\?view=3d">3D world</.test(plain))
+check('"3D world" links point at the 3D world', /href="[^"?]*\/">3D world</.test(plain))
 
 // ── 3. In the browser, offline ───────────────────────────────────────────────
 const server = await preview({ root: ROOT, logLevel: 'silent', preview: { port: PORT, strictPort: true } })
@@ -269,33 +269,70 @@ section('Phone (Pixel 7 emulation)')
   const zoom = await spread(page, 200, 350)
   check('plain page: pinch-zoom works', zoom > 1.2, `scale ${zoom.toFixed(2)}`)
 
-  const requests = []
-  page.on('request', (r) => requests.push(r.url()))
-  await page.goto(BASE)
-  await page.waitForURL(/projects\/$/, { timeout: 15000 }).catch(() => {})
-  check('phones are sent to the plain page', page.url() === BASE + 'projects/', page.url())
-  check('…without downloading the 3D bundle', !requests.some((u) => /\/assets\/start-[^/]*\.js$/.test(u)))
-  check('…and without the fallback notice',await page.isHidden('#fallback-notice'))
-
-  // The plain page's "3D world" link (?view=3d) still gets a phone in.
-  await page.click('nav.toc >> text=3D world')
-  await page.waitForSelector('canvas', { timeout: 30000 })
-  check('phone + ?view=3d opens the 3D world', page.url().endsWith('?view=3d'), page.url())
-  await page.waitForSelector('#boot', { state: 'hidden', timeout: 60000 })
-  await page.keyboard.press('Escape')
-  const box = await page.$eval('canvas', (c) => {
-    const r = c.getBoundingClientRect()
-    return { x: r.x + r.width / 2, y: r.y + r.height * 0.8 }
-  })
-  await page.evaluate(() => {
-    window.__touches = 0
-    document.querySelector('canvas').addEventListener('pointerdown', () => window.__touches++)
-  })
-  const canvasZoom = await spread(page, box.x, box.y)
-  const touches = await page.evaluate(() => window.__touches)
-  check('3D canvas: a pinch reaches the scene instead of zooming the page', canvasZoom === 1 && touches >= 2, `scale ${canvasZoom}, ${touches} pointers on the canvas`)
-  await page.screenshot({ path: path.join(OUT, 'phone-3d.png') })
   await ctx.close()
+
+  // Portrait: phones get the 3D world now, behind a "turn it sideways" card.
+  {
+    const ctx = await offlineContext({ ...devices['Pixel 7'] })
+    const page = await ctx.newPage()
+    await page.goto(BASE)
+    await page.waitForSelector('#boot', { state: 'hidden', timeout: 60000 })
+    check('phones get the 3D world (no redirect)', page.url() === BASE, page.url())
+    check('portrait: the "turn your phone sideways" card shows', await page.isVisible('.rotate'))
+    await page.screenshot({ path: path.join(OUT, 'phone-portrait.png') })
+    await ctx.close()
+  }
+
+  // Landscape: the on-screen controls.
+  {
+    const ctx = await offlineContext({ ...devices['Pixel 7 landscape'] })
+    const page = await ctx.newPage()
+    const seen = watch(page)
+    await page.goto(BASE)
+    await page.waitForSelector('#boot', { state: 'hidden', timeout: 60000 })
+    check('landscape: no rotate card', await page.isHidden('.rotate'))
+    check('landscape: joystick + Jump + Select shown', (await page.isVisible('.touch-stick')) && (await page.locator('.touch-btn').allTextContents()).join() === 'Jump,Select')
+    check('landscape: no keyboard legend', await page.isHidden('.controls'))
+
+    await page.tap('.panel__close') // the About panel opens on load
+    await page.waitForTimeout(600)
+    check('prompt names the Select button', ((await page.textContent('.prompt').catch(() => '')) ?? '').includes('Tap'))
+    await page.tap('.touch-btn:has-text("Select")')
+    await page.waitForTimeout(600)
+    check('Select opens what you are standing at', await page.isVisible('.panel'))
+    await page.tap('.panel__close')
+    await page.waitForTimeout(500)
+
+    // Joystick: push straight up (forward) and hold — walks off the About island.
+    const stick = await page.locator('.touch-stick').boundingBox()
+    const c = { x: stick.x + stick.width / 2, y: stick.y + stick.height / 2 }
+    const cdp = await ctx.newCDPSession(page)
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y, id: 3 }] })
+    for (let k = 1; k <= 8; k++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: c.x, y: c.y - (stick.height / 2) * (k / 8), id: 3 }] })
+      await page.waitForTimeout(16)
+    }
+    await page.waitForTimeout(2500)
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await page.waitForTimeout(600)
+    check('joystick walks the player (off the About island)', await page.isHidden('.prompt'))
+
+    const box = await page.$eval('canvas', (c) => {
+      const r = c.getBoundingClientRect()
+      return { x: r.x + r.width / 2, y: r.y + r.height * 0.4 }
+    })
+    await page.evaluate(() => {
+      window.__touches = 0
+      document.querySelector('canvas').addEventListener('pointerdown', () => window.__touches++)
+    })
+    const canvasZoom = await spread(page, box.x, box.y)
+    const touches = await page.evaluate(() => window.__touches)
+    check('3D canvas: a pinch reaches the scene instead of zooming the page', canvasZoom === 1 && touches >= 2, `scale ${canvasZoom}, ${touches} pointers on the canvas`)
+    await page.screenshot({ path: path.join(OUT, 'phone-landscape.png') })
+    check('phone: no requests to other sites', ctx.external.length === 0, ctx.external.join(', '))
+    check('phone: no page errors or failed requests', seen.errors.length === 0, seen.errors.join(' | '))
+    await ctx.close()
+  }
 }
 
 await browser.close()
